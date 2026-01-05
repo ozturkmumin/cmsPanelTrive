@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { onAuthChange, getCurrentUser, User } from '@/lib/auth'
+import { onAuthChange, getCurrentUser } from '@/lib/auth'
+import { User } from 'firebase/auth'
 import LoginModal from './LoginModal'
 import { useRouter } from 'next/navigation'
 
