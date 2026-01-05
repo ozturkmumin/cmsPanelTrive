@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Settings collection - only authenticated users can read/write
+    match /settings/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Translations collection (if you want to use a separate collection)
+    match /translations/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Languages collection (if you want to use a separate collection)
+    match /languages/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Pages collection - authenticated users can read/write
+    match /pages/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Default: deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

@@ -1,0 +1,2140 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Translation Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Custom scrollbar for cleaner look */
+      ::-webkit-scrollbar { width: 8px; height: 8px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+      ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+      .nested-space { border-left: 2px solid #e2e8f0; margin-left: 1.5rem; }
+    </style>
+    <script>
+      window.onerror = function(msg, url, line, col, error) {
+        alert("Error: " + msg + "\nLine: " + line);
+        return false;
+      };
+    </script>
+  </head>
+  <body class="bg-gray-50 text-slate-800 min-h-screen p-8 font-sans">
+    <div class="max-w-7xl mx-auto pb-20">
+      <header class="flex items-center justify-between mb-8 bg-white p-6 rounded-xl shadow-sm border border-gray-100 sticky top-4 z-30">
+        <div>
+          <h1 class="text-3xl font-bold text-slate-900 tracking-tight">Translation Manager</h1>
+          <p class="text-slate-500 text-sm mt-1">Manage your localization keys efficiently</p>
+        </div>
+        <div class="flex gap-3 items-center">
+          <div class="relative">
+            <input type="text" id="inpSearch" placeholder="Search pages, spaces, keys..." 
+              class="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-64 transition-all"
+              oninput="onSearchInput(this.value)" />
+            <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+          <button id="btnImport" class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-slate-700 hover:bg-gray-50 font-medium rounded-lg transition-colors shadow-sm">
+            <span>Import JSON</span>
+          </button>
+          <button id="btnGet" class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-slate-700 hover:bg-gray-50 font-medium rounded-lg transition-colors shadow-sm">
+            <span>Get JSON</span>
+          </button>
+          <button id="btnManageLanguages" class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-slate-700 hover:bg-gray-50 font-medium rounded-lg transition-colors shadow-sm">
+            <span>Languages</span>
+          </button>
+          <button id="btnAddPage" class="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white hover:bg-slate-800 font-medium rounded-lg transition-colors shadow-md hover:shadow-lg">
+            <span>+ Add Page</span>
+          </button>
+        </div>
+      </header>
+
+      <div id="tableArea" class="space-y-8"></div>
+
+      <!-- Undo Toast -->
+      <div id="undoToast" class="fixed top-8 right-8 z-50 hidden">
+        <div class="bg-slate-900 text-white px-6 py-4 rounded-lg shadow-2xl flex items-center gap-4 min-w-[300px] border border-slate-700" onmouseenter="pauseUndoTimer()" onmouseleave="resumeUndoTimer()">
+          <div class="flex-1">
+            <p class="font-medium" id="undoMessage">Item deleted</p>
+            <div class="w-full bg-slate-700 h-1 mt-2 rounded-full overflow-hidden">
+              <div id="undoProgress" class="bg-indigo-500 h-full w-full transition-all duration-[3000ms] ease-linear"></div>
+            </div>
+          </div>
+          <button onclick="performUndo()" class="text-indigo-400 hover:text-indigo-300 font-bold px-3 py-1 rounded hover:bg-slate-800 transition-colors">UNDO</button>
+        </div>
+      </div>
+
+      <!-- Generic Toast -->
+      <div id="genericToast" class="fixed top-24 right-8 z-50 hidden transition-all duration-300 transform translate-x-0">
+          <div id="genericToastContent" class="px-6 py-3 rounded-lg shadow-xl border flex items-center gap-3">
+              <span id="genericToastIcon"></span>
+              <p id="genericToastMsg" class="font-medium text-sm"></p>
+          </div>
+      </div>
+
+      <!-- Generic Modal -->
+      <div id="modalOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-40 transition-opacity">
+        <div id="modalBox" class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg transform transition-all scale-100 border border-gray-100 max-h-[90vh] overflow-y-auto"></div>
+      </div>
+
+      <!-- JSON Modal -->
+      <div id="jsonOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-3xl transform transition-all border border-gray-100">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold text-slate-900">Export JSON</h2>
+            <div class="flex gap-3">
+               <select id="selJsonLang" class="border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 text-sm py-2 px-3">
+               </select>
+              <button id="btnCopyJson" class="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-medium rounded-lg transition-colors">Copy</button>
+              <button id="btnDownloadJson" class="px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 font-medium rounded-lg shadow-md transition-colors">Download</button>
+              <button id="btnCloseJson" class="px-4 py-2 text-slate-500 hover:text-slate-700 font-medium transition-colors">Close</button>
+            </div>
+          </div>
+          <pre class="bg-slate-900 text-slate-50 p-6 rounded-xl h-[500px] overflow-auto font-mono text-sm shadow-inner"><code id="jsonCode"></code></pre>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        /* ----------------------
+           DATA LAYER
+           ---------------------- */
+        // Structure: pageKey -> { spaces: { spaceKey: { translations: {}, spaces: {} } } }
+        const translations = {}; 
+        const languages = []; 
+        const usedPageKeys = new Set();
+        const expandedPages = new Set(); // Track expanded state
+        const expandedSpaces = new Set(); // Track expanded space paths (pageKey::path1::path2)
+        
+        // Search State
+        let searchQuery = "";
+        let searchTimeout = null;
+
+        const tableArea = document.getElementById('tableArea'); // Explicitly define tableArea
+
+        const isValidKey = (k) => typeof k === "string" && k.trim() !== "" && !/\s/.test(k);
+
+        /* Search Helpers */
+        function isMatch(text) {
+            if (!searchQuery) return false;
+            return text.toLowerCase().includes(searchQuery.toLowerCase());
+        }
+
+        function checkDeepMatch(container) {
+            if (!searchQuery) return true; // No search = everything matches (but we handle this at top level)
+
+            // Check Translations
+            if (container.translations) {
+                for (const key in container.translations) {
+                    if (isMatch(key)) return true; // Key match
+                    const values = container.translations[key];
+                    for (const lang in values) {
+                        if (isMatch(values[lang])) return true; // Value match
+                    }
+                }
+            }
+
+            // Check Spaces
+            if (container.spaces) {
+                for (const key in container.spaces) {
+                    if (isMatch(key)) return true; // Space name match
+                    if (checkDeepMatch(container.spaces[key])) return true; // Child match
+                }
+            }
+            
+            return false;
+        }
+
+        window.onSearchInput = function(val) {
+            if (searchTimeout) clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchQuery = val.trim();
+                renderTable();
+            }, 300);
+        }
+
+        /* Global Error Handler */
+        window.onerror = function(msg, url, line, col, error) {
+            console.error("Global Error:", msg, error);
+            return false;
+        };
+
+        /* LocalStorage Persistence */
+        function saveData() {
+            try {
+                localStorage.setItem("tm_data", JSON.stringify(translations));
+                localStorage.setItem("tm_langs", JSON.stringify(languages));
+                // localStorage.setItem("tm_expanded_pages", JSON.stringify([...expandedPages])); // Disabled persistence
+                // localStorage.setItem("tm_expanded_spaces", JSON.stringify([...expandedSpaces])); // Disabled persistence
+                console.log("Data saved.");
+            } catch (e) {
+                console.error("Failed to save:", e);
+                showToast("Save Failed: " + e.message, 'error');
+            }
+        }
+
+        function loadData() {
+            try {
+                const dataStr = localStorage.getItem("tm_data");
+                const langsStr = localStorage.getItem("tm_langs");
+                const expPagesStr = localStorage.getItem("tm_expanded_pages");
+                const expSpacesStr = localStorage.getItem("tm_expanded_spaces");
+                
+                if (dataStr && langsStr) {
+                    const data = JSON.parse(dataStr);
+                    const langs = JSON.parse(langsStr);
+                    
+                    // Reset and populate
+                    Object.keys(translations).forEach(k => delete translations[k]);
+                    Object.assign(translations, data);
+                    
+                    languages.length = 0;
+                    languages.push(...langs);
+                    
+                    usedPageKeys.clear();
+                    Object.keys(translations).forEach(k => usedPageKeys.add(k));
+                    
+                    // Restore expanded state - DISABLED
+                    expandedPages.clear();
+                    /*
+                    if (expPagesStr) {
+                        try {
+                            const pages = JSON.parse(expPagesStr);
+                            pages.forEach(p => expandedPages.add(p));
+                        } catch(e) { console.warn("Failed to load expanded pages", e); }
+                    }
+                    */
+                    
+                    expandedSpaces.clear();
+                    /*
+                    if (expSpacesStr) {
+                        try {
+                            const spaces = JSON.parse(expSpacesStr);
+                            spaces.forEach(s => expandedSpaces.add(s));
+                        } catch(e) { console.warn("Failed to load expanded spaces", e); }
+                    }
+                    */
+                    
+                    console.log("Loaded:", Object.keys(translations).length, "pages");
+                } else {
+                    console.log("No data in LS");
+                }
+            } catch (e) {
+                console.error("Load Error:", e);
+                showToast("Load Failed: " + e.message, 'error');
+            }
+        }
+
+        // ...
+
+        window.togglePage = function(pageKey) {
+            if (expandedPages.has(pageKey)) {
+                expandedPages.delete(pageKey);
+            } else {
+                expandedPages.add(pageKey);
+            }
+            renderTable();
+        }
+
+        window.toggleSpace = function(uniquePath) {
+            if (expandedSpaces.has(uniquePath)) {
+                expandedSpaces.delete(uniquePath);
+            } else {
+                expandedSpaces.add(uniquePath);
+            }
+            renderTable();
+        }
+
+        /* Undo System */
+        let undoState = null; 
+        let undoTimer = null;
+        let undoStartTime = 0;
+        let undoRemaining = 3000;
+
+        window.startUndoTimer = function(msg, restoreFn) {
+          if (undoState) commitUndo();
+
+          undoState = { restoreFn };
+          undoRemaining = 3000;
+          
+          const toast = document.getElementById("undoToast");
+          const progress = document.getElementById("undoProgress");
+          const msgEl = document.getElementById("undoMessage");
+          
+          msgEl.textContent = msg;
+          toast.classList.remove("hidden");
+          
+          progress.style.transition = 'none';
+          progress.style.width = '100%';
+          void progress.offsetWidth;
+          
+          resumeUndoTimer();
+        }
+
+        window.resumeUndoTimer = function() {
+          if (!undoState) return;
+          const progress = document.getElementById("undoProgress");
+          progress.style.transition = `width ${undoRemaining}ms linear`;
+          progress.style.width = '0%';
+          
+          undoTimer = setTimeout(() => {
+              commitUndo();
+          }, undoRemaining);
+          undoStartTime = Date.now();
+        }
+
+        window.pauseUndoTimer = function() {
+          if (!undoTimer) return;
+          clearTimeout(undoTimer);
+          undoTimer = null;
+          const elapsed = Date.now() - undoStartTime;
+          undoRemaining = Math.max(0, undoRemaining - elapsed);
+          
+          const progress = document.getElementById("undoProgress");
+          const computedWidth = getComputedStyle(progress).width;
+          progress.style.transition = 'none';
+          progress.style.width = computedWidth;
+        }
+
+        window.performUndo = function() {
+          if (undoState && undoState.restoreFn) {
+              undoState.restoreFn();
+              saveData();
+          }
+          clearUndo();
+        }
+
+        function commitUndo() {
+          clearUndo();
+        }
+
+        function clearUndo() {
+          undoState = null;
+          if (undoTimer) clearTimeout(undoTimer);
+          document.getElementById("undoToast").classList.add("hidden");
+        }
+
+        /* Generic Toast */
+        let toastTimer = null;
+        window.showToast = function(msg, type = 'success') {
+            const el = document.getElementById("genericToast");
+            const content = document.getElementById("genericToastContent");
+            const msgEl = document.getElementById("genericToastMsg");
+            const iconEl = document.getElementById("genericToastIcon");
+            
+            if (toastTimer) clearTimeout(toastTimer);
+            
+            msgEl.textContent = msg;
+            
+            if (type === 'success') {
+                content.className = "px-6 py-3 rounded-lg shadow-xl border flex items-center gap-3 bg-emerald-50 border-emerald-200 text-emerald-800";
+                iconEl.innerHTML = '<svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+            } else {
+                content.className = "px-6 py-3 rounded-lg shadow-xl border flex items-center gap-3 bg-red-50 border-red-200 text-red-800";
+                iconEl.innerHTML = '<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+            }
+            
+            el.classList.remove("hidden", "translate-x-full", "opacity-0");
+            
+            toastTimer = setTimeout(() => {
+                el.classList.add("translate-x-full", "opacity-0");
+                setTimeout(() => el.classList.add("hidden"), 300);
+            }, 3000);
+        }
+
+
+        /* Core Operations */
+
+        function addLanguage(code) {
+          code = String(code || "").trim().toLowerCase();
+          if (!isValidKey(code)) throw new Error("Boşluk olmamalı (Invalid language code)");
+          if (languages.includes(code)) throw new Error("Language exists");
+          languages.push(code);
+          function traverse(container) {
+              for (const s in container.spaces) {
+                  traverse(container.spaces[s]);
+                  for (const t in container.spaces[s].translations) {
+                      container.spaces[s].translations[t][code] = "";
+                  }
+              }
+          }
+          for (const p in translations) {
+               traverse(translations[p]);
+          }
+          saveData();
+        }
+
+        function deleteLanguage(code) {
+            const idx = languages.indexOf(code);
+            if (idx === -1) return;
+            
+            // Backup
+            const backupLangs = [...languages];
+            const backupValues = {}; // path -> value
+            
+            function backupTraverse(container, path) {
+                if (container.translations) {
+                    for (const k in container.translations) {
+                        const t = container.translations[k];
+                        if (t[code] !== undefined) {
+                            backupValues[path + "::" + k] = t[code];
+                        }
+                    }
+                }
+                if (container.spaces) {
+                    for (const s in container.spaces) {
+                        backupTraverse(container.spaces[s], path + "::" + s);
+                    }
+                }
+            }
+            for (const p in translations) backupTraverse(translations[p], p);
+
+            // Delete
+            languages.splice(idx, 1);
+            
+            function deleteTraverse(container) {
+                if (container.translations) {
+                    for (const k in container.translations) {
+                        if (container.translations[k][code]) delete container.translations[k][code];
+                    }
+                }
+                if (container.spaces) {
+                    for (const s in container.spaces) deleteTraverse(container.spaces[s]);
+                }
+            }
+            for (const p in translations) deleteTraverse(translations[p]);
+            
+            saveData();
+            renderLanguageManager();
+            renderTable();
+            
+            startUndoTimer("Language deleted", () => {
+                // Restore
+                languages.length = 0;
+                languages.push(...backupLangs);
+                
+                function restoreTraverse(container, path) {
+                    if (container.translations) {
+                        for (const k in container.translations) {
+                            const key = path + "::" + k;
+                            if (backupValues[key] !== undefined) {
+                                container.translations[k][code] = backupValues[key];
+                            }
+                        }
+                    }
+                    if (container.spaces) {
+                        for (const s in container.spaces) {
+                            restoreTraverse(container.spaces[s], path + "::" + s);
+                        }
+                    }
+                }
+                for (const p in translations) restoreTraverse(translations[p], p);
+                
+                saveData();
+                renderLanguageManager();
+                renderTable();
+            });
+        }
+
+        function renameLanguage(oldLang, newLang) {
+            if (!isValidKey(newLang)) throw new Error("Boşluk olmamalı");
+            if (languages.includes(newLang)) throw new Error("Language exists");
+            
+            const idx = languages.indexOf(oldLang);
+            if (idx === -1) return;
+            languages[idx] = newLang;
+
+            // Recursive helper to update keys
+            function traverseAndUpdate(container) {
+                // Update translations in this container
+                if (container.translations) {
+                    for (const key in container.translations) {
+                        const tObj = container.translations[key];
+                        if (tObj && tObj.hasOwnProperty(oldLang)) {
+                            tObj[newLang] = tObj[oldLang];
+                            delete tObj[oldLang];
+                        }
+                    }
+                }
+                // Recurse into spaces
+                if (container.spaces) {
+                    for (const sKey in container.spaces) {
+                        traverseAndUpdate(container.spaces[sKey]);
+                    }
+                }
+            }
+
+            // Start traversal from root pages
+            for (const pageKey in translations) {
+                traverseAndUpdate(translations[pageKey]);
+            }
+            
+            saveData();
+            renderTable();
+        }
+
+        function addPage(pageKey) {
+          if (!isValidKey(pageKey)) throw new Error("Boşluk olmamalı (Invalid page key)");
+          if (usedPageKeys.has(pageKey)) throw new Error("Page key already exists");
+          usedPageKeys.add(pageKey);
+          translations[pageKey] = { spaces: {}, translations: {} };
+          expandedPages.add(pageKey); // Auto-expand new page
+          saveData();
+        }
+
+        function renamePage(oldKey, newKey) {
+          if (oldKey === newKey) return;
+          if (!isValidKey(newKey)) throw new Error("Boşluk olmamalı (Invalid page key)");
+          if (usedPageKeys.has(newKey)) throw new Error("Page key already exists");
+          
+          translations[newKey] = translations[oldKey];
+          delete translations[oldKey];
+          usedPageKeys.delete(oldKey);
+          usedPageKeys.add(newKey);
+          if (expandedPages.has(oldKey)) {
+              expandedPages.delete(oldKey);
+              expandedPages.add(newKey);
+          }
+          saveData();
+        }
+
+        function getSpaceContainer(pageKey, pathArray) {
+            let current = translations[pageKey];
+            for (const key of pathArray) {
+                if (!current || !current.spaces || !current.spaces[key]) return null;
+                current = current.spaces[key];
+            }
+            return current;
+        }
+
+        function addSpace(pageKey, parentPath, spaceKey, isArray = false) {
+          const container = getSpaceContainer(pageKey, parentPath);
+          if (!container) throw new Error("Parent not found");
+          
+          if (!isValidKey(spaceKey)) throw new Error("Boşluk olmamalı (Invalid space key)");
+          if (container.spaces && container.spaces[spaceKey]) throw new Error("Space key already exists in this level");
+          
+          if (!container.spaces) container.spaces = {};
+          container.spaces[spaceKey] = { translations: {}, spaces: {}, isArray: isArray };
+          
+          expandedPages.add(pageKey); 
+          
+          // Auto-expand parent spaces
+          let currentP = pageKey;
+          for(const p of parentPath) {
+              currentP += "::" + p;
+              expandedSpaces.add(currentP);
+          }
+          saveData();
+        }
+
+        function renameSpace(pageKey, parentPath, oldKey, newKey) {
+          const container = getSpaceContainer(pageKey, parentPath);
+          if (!container) throw new Error("Parent not found");
+          if (oldKey === newKey) return;
+          if (!isValidKey(newKey)) throw new Error("Boşluk olmamalı");
+          if (container.spaces[newKey]) throw new Error("Space key exists");
+
+          container.spaces[newKey] = container.spaces[oldKey];
+          delete container.spaces[oldKey];
+          
+          // Update expanded state for renamed space and its children
+          // This is complex, for now let's just collapse it or leave it.
+          // Simplest: remove old key from set, add new key if old was present.
+          const parentPrefix = pageKey + (parentPath.length ? "::" + parentPath.join("::") : "");
+          const oldPath = parentPrefix + "::" + oldKey;
+          const newPath = parentPrefix + "::" + newKey;
+          
+          if (expandedSpaces.has(oldPath)) {
+              expandedSpaces.delete(oldPath);
+              expandedSpaces.add(newPath);
+          }
+          // Note: Deeply nested expanded states would be lost/broken. 
+          // For MVP this is acceptable or we can iterate to fix.
+          saveData();
+        }
+
+        function addTranslation(pageKey, parentPath, key, values) {
+            const container = getSpaceContainer(pageKey, parentPath);
+            if (!container) throw new Error("Space not found");
+            if (!isValidKey(key)) throw new Error("Boşluk olmamalı");
+            
+            if (!container.translations) container.translations = {};
+
+            if (container.translations[key]) throw new Error("Key exists");
+            
+            const obj = {};
+            languages.forEach(l => obj[l] = values && values[l] ? values[l] : "");
+            container.translations[key] = obj;
+            
+            expandedPages.add(pageKey);
+            
+            // Auto-expand parent spaces
+            let currentP = pageKey;
+            for(const p of parentPath) {
+                currentP += "::" + p;
+                expandedSpaces.add(currentP);
+            }
+            saveData();
+        }
+
+        function renameTranslationKey(pageKey, parentPath, oldKey, newKey) {
+            const container = getSpaceContainer(pageKey, parentPath);
+            if (!container) return;
+            if (oldKey === newKey) return;
+            if (!isValidKey(newKey)) throw new Error("Boşluk olmamalı");
+            if (container.translations[newKey]) throw new Error("Key exists");
+
+            container.translations[newKey] = container.translations[oldKey];
+            delete container.translations[oldKey];
+            saveData();
+        }
+
+        function updateTranslationValue(pageKey, parentPath, key, lang, value) {
+            const container = getSpaceContainer(pageKey, parentPath);
+            if (container && container.translations[key]) {
+                container.translations[key][lang] = value;
+                saveData();
+            }
+        }
+
+        function getTranslationsByLang(lang) {
+          const out = { [lang]: {} };
+          
+          function recurse(container) {
+              // Check if this container is an array
+              if (container.isArray) {
+                  const arr = [];
+                  // We need to find the max index to reconstruct the array properly? 
+                  // Or just iterate keys and assume they are indices?
+                  // Let's iterate all keys in spaces and translations that look like integers.
+                  
+                  const indices = [];
+                  for (const s in container.spaces) {
+                      if (!isNaN(parseInt(s))) indices.push(parseInt(s));
+                  }
+                  for (const t in container.translations) {
+                      if (!isNaN(parseInt(t))) indices.push(parseInt(t));
+                  }
+                  
+                  if (indices.length > 0) {
+                      const maxIndex = Math.max(...indices);
+                      // Fill array
+                      for (let i = 0; i <= maxIndex; i++) {
+                          const key = String(i);
+                          if (container.spaces[key]) {
+                              arr[i] = recurse(container.spaces[key]);
+                          } else if (container.translations[key]) {
+                              arr[i] = container.translations[key][lang] || "";
+                          } else {
+                              // sparse array or missing index? 
+                              // If missing, maybe null? Or just skip? 
+                              // JSON arrays can't have holes if we want it clean. 
+                              // Let's assume null for holes.
+                              arr[i] = null; 
+                          }
+                      }
+                      // Filter out trailing nulls if any? No, keep structure.
+                  }
+                  return arr;
+              }
+
+              const res = {};
+              for (const s in container.spaces) {
+                  res[s] = recurse(container.spaces[s]);
+              }
+              for (const t in container.translations) {
+                  res[t] = container.translations[t][lang] || "";
+              }
+              return res;
+          }
+
+          for (const p in translations) {
+              out[lang][p] = recurse(translations[p]);
+          }
+          return out;
+        }
+
+        function getLanguageData(code) {
+            const data = {};
+            
+            function traverse(container, path) {
+                if (container.translations) {
+                    for (const k in container.translations) {
+                        const t = container.translations[k];
+                        if (t[code] !== undefined) {
+                            data[path + "::" + k] = t[code];
+                        }
+                    }
+                }
+                if (container.spaces) {
+                    for (const s in container.spaces) {
+                        traverse(container.spaces[s], path + "::" + s);
+                    }
+                }
+            }
+            
+            for (const p in translations) {
+                traverse(translations[p], p);
+            }
+            return data;
+        }
+
+        /* ----------------------
+           UI: render table
+           ---------------------- */
+        /* ----------------------
+           UI: render table
+           ---------------------- */
+        // const tableArea = document.getElementById("tableArea"); // Removed duplicate
+
+        function escapeHtml(str) {
+          return String(str || "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+        }
+        
+        window.togglePage = function(pageKey) {
+            if (expandedPages.has(pageKey)) {
+                expandedPages.delete(pageKey);
+            } else {
+                expandedPages.add(pageKey);
+            }
+            renderTable();
+        }
+
+        function renderTable() {
+          const pages = Object.keys(translations).sort((a, b) => a.localeCompare(b, 'tr', { sensitivity: 'base' }));
+          // alert("Rendering table with " + pages.length + " pages.");
+          console.log("Rendering table. Pages:", pages, "Translations:", translations);
+          if (pages.length === 0) {
+            tableArea.innerHTML = `
+              <div class="text-center py-16 bg-white rounded-xl border border-dashed border-gray-300">
+                <p class="text-slate-500 mb-4">No content yet.</p>
+                <p class="text-sm text-slate-400">Start by adding a language, then create your first page.</p>
+              </div>`;
+            return;
+          }
+
+          let html = "";
+          let hasVisiblePages = false;
+
+          for (const pageKey of pages) {
+            // Search Logic
+            let isVisible = true;
+            let forceExpand = false;
+
+            if (searchQuery) {
+                const selfMatch = isMatch(pageKey);
+                const childMatch = checkDeepMatch(translations[pageKey]);
+                
+                if (selfMatch || childMatch) {
+                    isVisible = true;
+                    forceExpand = true; // Always expand if there is a match involved
+                } else {
+                    isVisible = false;
+                }
+            }
+
+            if (!isVisible) continue;
+            hasVisiblePages = true;
+
+            const isExpanded = forceExpand || expandedPages.has(pageKey);
+            const chevron = isExpanded 
+                ? '<svg class="w-5 h-5 text-slate-400 transition-transform duration-200 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>'
+                : '<svg class="w-5 h-5 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>';
+
+            html += `
+            <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-all hover:shadow-md">
+              <div class="bg-slate-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center group cursor-pointer" onclick="togglePage('${pageKey}')">
+                <div class="flex items-center gap-3">
+                  <div class="p-2 bg-white rounded-lg shadow-sm border border-gray-100">
+                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                  </div>
+                  <h2 class="text-lg font-bold text-slate-800">
+                    ${escapeHtml(pageKey)}
+                    ${searchQuery && isMatch(pageKey) ? '<span class="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">Match</span>' : ''}
+                  </h2>
+                  <div class="flex gap-2 ml-2">
+                      <button class="text-xs px-3 py-1.5 bg-white border border-gray-200 text-indigo-600 rounded-md hover:bg-indigo-50 font-medium transition-colors" onclick="event.stopPropagation(); openAddSpaceModal('${pageKey}', [])">+ Add Space</button>
+                      <button class="text-xs px-3 py-1.5 bg-white border border-gray-200 text-emerald-600 rounded-md hover:bg-emerald-50 font-medium transition-colors" onclick="event.stopPropagation(); openAddTranslationModal('${pageKey}', [])">+ Add Translation</button>
+                  </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button class="text-xs px-3 py-1.5 bg-white border border-gray-200 text-slate-600 rounded-md hover:bg-gray-50 font-medium transition-colors" onclick="event.stopPropagation(); openRenamePageModal('${pageKey}')">Edit Name</button>
+                        <button class="text-xs px-3 py-1.5 bg-white border border-red-100 text-red-600 rounded-md hover:bg-red-50 font-medium transition-colors" onclick="event.stopPropagation(); promptDeletePage('${pageKey}')">Delete</button>
+                    </div>
+                    <div class="p-1 rounded-full hover:bg-slate-200 transition-colors">
+                        ${chevron}
+                    </div>
+                </div>
+              </div>
+              ${isExpanded ? `
+                <div class="p-6 space-y-6 border-t border-gray-100">
+                    ${renderTranslations(pageKey, [], translations[pageKey].translations, searchQuery && isMatch(pageKey), false)}
+                    ${renderSpacesRecursive(pageKey, [], translations[pageKey], searchQuery && isMatch(pageKey))}
+                </div>` : ''}
+            </section>`;
+          }
+          
+          if (!hasVisiblePages && searchQuery) {
+              html = `
+              <div class="text-center py-16 bg-white rounded-xl border border-dashed border-gray-300">
+                <p class="text-slate-500 mb-4">No matches found for "<b>${escapeHtml(searchQuery)}</b>"</p>
+                <button onclick="document.getElementById('inpSearch').value=''; onSearchInput('');" class="text-indigo-600 hover:text-indigo-700 font-medium">Clear Search</button>
+              </div>`;
+          }
+          
+          tableArea.innerHTML = html;
+        }
+
+        function mergeRecursive(pageKey, path, obj, lang) {
+            const container = getSpaceContainer(pageKey, path);
+            if (!container) return; 
+
+            // Ensure translations object exists (for Pages or Spaces created without it)
+            if (!container.translations) container.translations = {};
+            if (!container.spaces) container.spaces = {};
+
+            for (const key in obj) {
+                if (!isValidKey(key)) continue;
+                const val = obj[key];
+
+                if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean' || val === null) {
+                    // Case: Translation (Leaf node)
+                    if (container.spaces[key]) {
+                        console.warn(`Skipping key '${key}' at path ${path.join('/')}: It is already a Space.`);
+                        continue;
+                    }
+
+                    if (container.translations[key]) {
+                        container.translations[key][lang] = val;
+                    } else {
+                        addTranslation(pageKey, path, key, { [lang]: val });
+                    }
+
+                } else if (typeof val === 'object' && val !== null) {
+                    // Case: Space
+                    if (container.translations[key]) {
+                        console.warn(`Skipping key '${key}' at path ${path.join('/')}: It is already a Translation.`);
+                        continue;
+                    }
+
+                    if (!container.spaces[key]) {
+                        addSpace(pageKey, path, key);
+                    }
+                    mergeRecursive(pageKey, [...path, key], val, lang);
+                }
+            }
+            saveData(); // Added saveData() here
+        }
+
+        function renderSpacesRecursive(pageKey, path, container, parentMatches = false) {
+            const isArray = container.isArray;
+            const spaces = Object.keys(container.spaces || {}).sort((a, b) => {
+                if (isArray) {
+                    const nA = parseInt(a);
+                    const nB = parseInt(b);
+                    if (isNaN(nA) && isNaN(nB)) return a.localeCompare(b, 'tr', { sensitivity: 'base' });
+                    if (isNaN(nA)) return 1;
+                    if (isNaN(nB)) return -1;
+                    return nA - nB;
+                }
+                return a.localeCompare(b, 'tr', { sensitivity: 'base' });
+            });
+            
+            let html = "";
+            
+            if (spaces.length === 0 && path.length === 0) {
+                if (searchQuery && !parentMatches) return ''; // Hide empty message if searching and no match
+                return '<div class="text-sm text-slate-400 italic px-2">No spaces yet. Add one to start translating.</div>';
+            }
+
+            for (const s of spaces) {
+                // Search Logic
+                let isVisible = true;
+                let forceExpand = false;
+                let selfMatch = false;
+
+                if (searchQuery) {
+                    selfMatch = isMatch(s);
+                    const childMatch = checkDeepMatch(container.spaces[s]);
+                    
+                    if (parentMatches || selfMatch || childMatch) {
+                        isVisible = true;
+                        if (selfMatch || childMatch) forceExpand = true;
+                    } else {
+                        isVisible = false;
+                    }
+                }
+
+                if (!isVisible) continue;
+
+                const currentPath = [...path, s];
+                const pathStr = JSON.stringify(currentPath).replace(/"/g, '&quot;');
+                const parentPathStr = JSON.stringify(path).replace(/"/g, '&quot;');
+                
+                const uniquePath = pageKey + "::" + currentPath.join("::");
+                const isExpanded = forceExpand || expandedSpaces.has(uniquePath);
+                
+                const chevron = isExpanded 
+                    ? '<svg class="w-4 h-4 text-slate-400 transition-transform duration-200 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>'
+                    : '<svg class="w-4 h-4 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>';
+
+                const num = parseInt(s);
+                const order = (isArray && !isNaN(num)) ? num + 1 : '-';
+
+                html += `
+                <div class="ml-4 border-l-2 border-slate-300 pl-4 mt-4">
+                  <div class="flex justify-between items-center group/space cursor-pointer sticky top-0 bg-white/95 backdrop-blur z-10 py-2 border-b border-transparent hover:border-slate-100 transition-colors" onclick="event.stopPropagation(); toggleSpace('${uniquePath}')">
+                    <div class="flex items-center gap-2">
+                       <div class="p-1 rounded hover:bg-slate-100 transition-colors">
+                         ${chevron}
+                       </div>
+                      <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
+                      <h3 class="font-semibold text-slate-700 text-sm flex items-center gap-2">
+                        ${isArray && order !== '-' ? `<span class="text-xs text-slate-500 font-mono bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">#${order}</span>` : escapeHtml(s)}
+                        ${container.spaces[s].isArray ? `
+                        <span class="ml-2 inline-flex items-center gap-1 bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border border-purple-200" title="Array">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                            Array
+                        </span>` : ''}
+                        ${searchQuery && selfMatch ? '<span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">Match</span>' : ''}
+                        ${isArray && order !== '-' ? `
+                        <button class="text-slate-300 hover:text-indigo-600 opacity-0 group-hover/space:opacity-100 transition-opacity p-1" onclick="event.stopPropagation(); openChangeOrderModal('${pageKey}', ${parentPathStr}, '${s}', 'space')">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        </button>` : ''}
+                      </h3>
+                      <button class="text-xs px-2 py-1 text-indigo-600 hover:text-indigo-700 font-medium ml-2" onclick="event.stopPropagation(); openAddSpaceModal('${pageKey}', ${pathStr})">${container.spaces[s].isArray ? '+ Add Object' : '+ Add Sub-Space'}</button>
+                      ${!container.spaces[s].isArray ? `<button class="text-xs px-2 py-1 text-emerald-600 hover:text-emerald-700 font-medium" onclick="event.stopPropagation(); openAddTranslationModal('${pageKey}', ${pathStr})">+ Add Translation</button>` : ''}
+                    </div>
+                    <div class="flex gap-2 opacity-0 group-hover/space:opacity-100 transition-opacity">
+                      ${!isArray ? `<button class="text-xs px-2 py-1 text-slate-500 hover:text-indigo-600 font-medium" onclick="event.stopPropagation(); openRenameSpaceModal('${pageKey}', ${parentPathStr}, '${s}')">Rename</button>` : ''}
+                      <button class="text-xs px-2 py-1 text-slate-500 hover:text-red-600 font-medium" onclick="event.stopPropagation(); promptDeleteSpace('${pageKey}', ${parentPathStr}, '${s}')">Delete</button>
+                    </div>
+                  </div>
+                  
+                  ${isExpanded ? `
+                  <div class="mt-3">
+                      ${renderTranslations(pageKey, currentPath, container.spaces[s].translations, parentMatches || selfMatch, container.spaces[s].isArray)}
+                      ${renderSpacesRecursive(pageKey, currentPath, container.spaces[s], parentMatches || selfMatch)}
+                  </div>` : ''}
+                </div>`;
+            }
+            return html;
+        }
+
+        function renderTranslations(pageKey, parentPath, translationsMap, parentMatches = false, isParentArray = false) {
+            const keys = Object.keys(translationsMap || {}).sort((a, b) => {
+                if (isParentArray) {
+                    const nA = parseInt(a);
+                    const nB = parseInt(b);
+                    if (isNaN(nA) && isNaN(nB)) return a.localeCompare(b, 'tr', { sensitivity: 'base' });
+                    if (isNaN(nA)) return 1;
+                    if (isNaN(nB)) return -1;
+                    return nA - nB;
+                }
+                return a.localeCompare(b, 'tr', { sensitivity: 'base' });
+            });
+            
+            if (keys.length === 0) {
+                if (searchQuery && !parentMatches) return '';
+                return '<div class="text-xs text-slate-400 italic py-2">No translations</div>';
+            }
+            
+            const pathStr = JSON.stringify(parentPath).replace(/"/g, '&quot;');
+            
+            // Filter keys if search is active
+            let visibleKeys = keys;
+            if (searchQuery && !parentMatches) {
+                visibleKeys = keys.filter(k => {
+                    if (isMatch(k)) return true;
+                    const vals = translationsMap[k];
+                    for (const l in vals) {
+                        if (isMatch(vals[l])) return true;
+                    }
+                    return false;
+                });
+            }
+
+            if (visibleKeys.length === 0) return '';
+
+            let html = `<div class="overflow-x-auto"><table class="w-full text-left text-sm">
+              <thead>
+                <tr class="border-b border-gray-100 text-slate-400 uppercase text-xs tracking-wider">
+                  ${isParentArray ? '<th class="p-2 font-medium w-16">Order</th>' : ''}
+                  <th class="p-2 font-medium w-1/4">Key</th>
+                  ${languages.map((l) => `<th class="p-2 font-medium">${escapeHtml(l)}</th>`).join("")}
+                  <th class="p-2 font-medium w-20 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-50">`;
+
+            for (const tkey of visibleKeys) {
+        const keyMatch = searchQuery && isMatch(tkey);
+        const num = parseInt(tkey);
+        const order = (isParentArray && !isNaN(num)) ? num + 1 : '-';
+        
+        // Determine type from first available value
+        let keyType = 'string';
+        for (const l of languages) {
+            const v = translationsMap[tkey][l];
+            if (v !== undefined) {
+                if (typeof v === 'number') keyType = 'number';
+                else if (typeof v === 'boolean') keyType = 'boolean';
+                else if (v === null) keyType = 'null';
+                break;
+            }
+        }
+
+        let typeBadge = '';
+        if (keyType === 'number') typeBadge = '<span class="ml-2 text-[9px] uppercase font-bold text-green-600 bg-green-100 px-1 rounded">NUM</span>';
+        else if (keyType === 'boolean') typeBadge = '<span class="ml-2 text-[9px] uppercase font-bold text-blue-600 bg-blue-100 px-1 rounded">BOOL</span>';
+        else if (keyType === 'null') typeBadge = '<span class="ml-2 text-[9px] uppercase font-bold text-gray-600 bg-gray-100 px-1 rounded">NULL</span>';
+        else typeBadge = '<span class="ml-2 text-[9px] uppercase font-bold text-slate-400 bg-slate-100 px-1 rounded">STR</span>';
+        
+        html += `
+        <tr class="hover:bg-slate-50/50 transition-colors group/row">
+          ${isParentArray ? `
+          <td class="p-2 font-medium text-slate-500 align-top">
+            <div class="flex items-center gap-1">
+                <span>${order !== '-' ? order : ''}</span>
+                <button class="text-slate-300 hover:text-indigo-600 opacity-0 group-hover/row:opacity-100 transition-opacity" onclick="openChangeOrderModal('${pageKey}', ${pathStr}, '${tkey}', 'translation')">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        </button>
+            </div>
+          </td>` : ''}
+          <td class="p-2 font-medium text-slate-700 align-top">
+            <div class="flex items-center">
+                ${escapeHtml(tkey)}
+                ${typeBadge}
+                ${keyMatch ? '<span class="ml-2 text-[10px] bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded-full">Match</span>' : ''}
+            </div>
+          </td>
+          ${languages.map(l => {
+              let val = translationsMap[tkey][l];
+              if (val === undefined) val = "";
+              
+              const valMatch = searchQuery && isMatch(val);
+              const type = typeof val;
+              const isNull = val === null;
+              
+              let contentHtml = '';
+              if (type === 'string') {
+                  contentHtml = `<textarea rows="1" class="w-full bg-transparent border-transparent focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 rounded px-2 py-1 text-slate-600 resize-none transition-all hover:bg-white hover:border-gray-200"
+                    oninput="onInlineEdit(this,'${pageKey}',${pathStr},'${tkey.replace(/'/g, "\\'")}', '${l}')">${escapeHtml(val)}</textarea>`;
+              } else if (type === 'boolean') {
+                  contentHtml = `<div class="px-2 py-1"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">${val}</span></div>`;
+              } else if (type === 'number') {
+                  contentHtml = `<div class="px-2 py-1"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-100">${val}</span></div>`;
+              } else if (isNull) {
+                  contentHtml = `<div class="px-2 py-1"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-500 border border-gray-100 italic">null</span></div>`;
+              }
+
+              return `
+            <td class="p-2 align-top ${valMatch ? 'bg-yellow-50/50' : ''}">
+              ${contentHtml}
+            </td>`;
+          }).join("")}
+          <td class="p-2 text-right align-top">
+            <div class="flex justify-end gap-1">
+              <button class="p-1 text-slate-400 hover:text-indigo-600 transition-colors" title="Edit Key & Values" onclick="openEditTranslationModal('${pageKey}', ${pathStr}, '${tkey}')">
+                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+              </button>
+              <button class="p-1 text-slate-400 hover:text-red-600 transition-colors" title="Delete" onclick="promptDeleteTranslation('${pageKey}', ${pathStr}, '${tkey}')">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+              </button>
+            </div>
+          </td>
+        </tr>`;
+            }
+            html += `</tbody></table></div>`;
+            return html;
+        }
+
+        window.onInlineEdit = function(el, page, path, tkey, lang) {
+          updateTranslationValue(page, path, tkey, lang, el.value);
+          el.style.height = 'auto';
+          el.style.height = el.scrollHeight + 'px';
+        }
+
+        /* ----------------------
+           MODALS + helpers
+           ---------------------- */
+        const modalOverlay = document.getElementById("modalOverlay");
+        const modalBox = document.getElementById("modalBox");
+
+        window.openModal = function(html) {
+          modalBox.innerHTML = html;
+          modalOverlay.classList.remove("hidden");
+          modalOverlay.classList.add("flex");
+          setTimeout(() => {
+              const input = modalBox.querySelector('input');
+              if(input) input.focus();
+          }, 50);
+        }
+        window.closeModal = function() {
+          modalOverlay.classList.add("hidden");
+          modalOverlay.classList.remove("flex");
+        }
+
+        function showModalError(msg) {
+          const el = document.getElementById("modalError");
+          if (el) {
+              el.textContent = msg;
+              el.classList.remove("hidden");
+          } else {
+              alert(msg);
+          }
+        }
+
+        /* Delete Actions with Undo */
+        window.promptDeletePage = function(page) {
+          // Optimistic delete with Undo
+          const backup = translations[page];
+          
+          // Perform delete
+          delete translations[page];
+          usedPageKeys.delete(page);
+          const wasExpanded = expandedPages.has(page);
+          expandedPages.delete(page);
+          
+          saveData();
+          renderTable();
+          
+          startUndoTimer("Page deleted", () => {
+              // Restore
+              translations[page] = backup;
+              usedPageKeys.add(page);
+              if (wasExpanded) expandedPages.add(page);
+              saveData();
+              renderTable();
+          });
+        }
+
+        window.promptDeleteSpace = function(page, parentPath, space) {
+          const container = getSpaceContainer(page, parentPath);
+          const backup = container.spaces[space];
+          
+          // Delete
+          delete container.spaces[space];
+          saveData();
+          renderTable();
+          
+          startUndoTimer("Space deleted", () => {
+              // Restore
+              container.spaces[space] = backup;
+              saveData();
+              renderTable();
+          });
+        }
+
+        window.promptDeleteTranslation = function(page, parentPath, key) {
+          const container = getSpaceContainer(page, parentPath);
+          const backup = container.translations[key];
+          
+          // Delete
+          delete container.translations[key];
+          saveData();
+          renderTable();
+          
+          startUndoTimer("Translation deleted", () => {
+              // Restore
+              container.translations[key] = backup;
+              saveData();
+              renderTable();
+          });
+        }
+
+        /* Language Manager */
+        document.getElementById("btnManageLanguages").onclick = () => {
+            renderLanguageManager();
+        };
+
+        window.renderLanguageManager = function() {
+            const list = languages.map(l => `
+              <div class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100 mb-2">
+                  <span class="font-bold text-slate-700 uppercase">${escapeHtml(l)}</span>
+                  <div class="flex gap-2">
+                      <button class="text-indigo-500 hover:text-indigo-700 text-sm font-medium" onclick="promptRenameLanguage('${l}')">Rename</button>
+                      <button class="text-red-500 hover:text-red-700 text-sm font-medium" onclick="promptDeleteLanguage('${l}')">Delete</button>
+                  </div>
+              </div>
+            `).join('');
+            
+            openModal(`<div>
+              <h3 class='text-lg font-bold text-slate-900 mb-4'>Manage Languages</h3>
+              <div class="mb-6 max-h-60 overflow-y-auto">
+                  ${list.length ? list : '<p class="text-slate-500 text-sm">No languages added yet.</p>'}
+              </div>
+              <div class='flex justify-between gap-3 mt-6 pt-4 border-t border-gray-100'>
+                  <button class='px-4 py-2 text-red-500 hover:bg-red-50 rounded-lg font-medium transition-colors text-sm' onclick='promptResetData()'>Reset / Clear All Data</button>
+                  <div class="flex gap-3">
+                      <button class='px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg font-medium transition-colors' onclick='closeModal()'>Close</button>
+                      <button class='px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium transition-colors shadow-sm' onclick='openAddLanguageModal()'>+ Add Language</button>
+                  </div>
+              </div>
+            </div>`);
+        }
+
+        window.promptRenameLanguage = function(oldCode) {
+          openModal(`<div>
+            <h3 class='text-lg font-bold text-slate-900 mb-4'>Rename Language</h3>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-slate-700 mb-1">New Language Code</label>
+              <input id='inpLangRename' class='w-full border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 p-2.5' value="${escapeHtml(oldCode)}" />
+              <div id="modalError" class="text-red-500 text-sm mt-2 hidden"></div>
+            </div>
+            <div class='flex justify-end gap-3'>
+              <button class='px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg font-medium transition-colors' onclick='renderLanguageManager()'>Cancel</button>
+              <button class='px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium transition-colors shadow-sm' onclick="saveRenameLanguage('${oldCode}')">Save</button>
+            </div>
+          </div>`);
+        }
+
+        window.saveRenameLanguage = function(oldCode) {
+            const newCode = document.getElementById("inpLangRename").value;
+            try {
+                renameLanguage(oldCode, newCode);
+                renderLanguageManager();
+            } catch(e) {
+                showModalError(e.message);
+            }
+        }
+
+        window.promptDeleteLanguage = function(code) {
+            const data = getLanguageData(code);
+            const jsonPreview = JSON.stringify(data, null, 2);
+            
+            openModal(`<div>
+              <h3 class='text-lg font-bold text-red-600 mb-2'>Delete Language '${escapeHtml(code)}'?</h3>
+              <p class="text-slate-600 mb-4 text-sm">This will permanently delete all translations for <strong>${escapeHtml(code)}</strong>. Here is the data you will lose:</p>
+              <pre class="bg-slate-900 text-slate-50 p-4 rounded-lg text-xs h-40 overflow-auto mb-4">${jsonPreview}</pre>
+              <div class='flex justify-end gap-3'>
+                  <button class='px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg font-medium transition-colors' onclick='renderLanguageManager()'>Cancel</button>
+                  <button id="btnConfirmDelLang" disabled class='px-4 py-2 bg-red-600 text-white disabled:bg-red-300 rounded-lg font-medium transition-colors shadow-sm'>
+                      Confirm (3)
+                  </button>
+              </div>
+            </div>`);
+            
+            let count = 3;
+            const btn = document.getElementById("btnConfirmDelLang");
+            const interval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    btn.textContent = `Confirm (${count})`;
+                } else {
+                    clearInterval(interval);
+                    btn.textContent = "Confirm Delete";
+                    btn.disabled = false;
+                    btn.onclick = () => {
+                        deleteLanguage(code);
+                        // renderLanguageManager is called inside deleteLanguage? No, it's called after in the original code, but let's check.
+                        // In the original deleteLanguage (Step 6), it calls renderLanguageManager().
+                        // So we just need to close the modal? 
+                        // Actually deleteLanguage calls renderLanguageManager() which calls openModal() again? 
+                        // Wait, renderLanguageManager opens the manager modal.
+                        // So if we call deleteLanguage, it will re-render the manager list.
+                        // But we are currently IN a modal (the confirmation one).
+                        // We want to go back to the Language Manager list.
+                        // deleteLanguage calls renderLanguageManager() at the end.
+                        // renderLanguageManager() calls openModal().
+                        // So it should replace the current confirmation modal with the list modal.
+                        // This is desired behavior.
+                    };
+                }
+            }, 1000);
+        }
+
+        window.promptResetData = function() {
+            const pageCount = Object.keys(translations).length;
+            const langCount = languages.length;
+            
+            openModal(`<div>
+              <div class="flex items-center gap-3 mb-4 text-red-600">
+                  <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                  <h3 class='text-lg font-bold text-slate-900'>Danger Zone: Reset All Data</h3>
+              </div>
+              <p class="text-slate-600 mb-2">Are you sure you want to delete <b>EVERYTHING</b>?</p>
+              <ul class="list-disc list-inside text-sm text-slate-500 mb-4 bg-red-50 p-3 rounded-lg">
+                  <li>${langCount} Languages will be deleted.</li>
+                  <li>${pageCount} Pages and all their translations will be deleted.</li>
+                  <li>This action cannot be undone.</li>
+              </ul>
+              
+              <div class='flex justify-end gap-3'>
+                  <button class='px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg font-medium transition-colors' onclick='renderLanguageManager()'>Cancel</button>
+                  <button id="btnConfirmReset" disabled class='px-4 py-2 bg-red-600 text-white disabled:bg-red-300 rounded-lg font-medium transition-colors shadow-sm'>
+                      Confirm Reset (5)
+                  </button>
+              </div>
+            </div>`);
+            
+            let count = 5;
+            const btn = document.getElementById("btnConfirmReset");
+            const interval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    btn.textContent = `Confirm Reset (${count})`;
+                } else {
+                    clearInterval(interval);
+                    btn.textContent = "Confirm Reset";
+                    btn.disabled = false;
+                    btn.onclick = () => {
+                        // Backup
+                        const backupData = JSON.stringify(translations);
+                        const backupLangs = JSON.stringify(languages);
+                        const backupExpPages = JSON.stringify([...expandedPages]);
+                        const backupExpSpaces = JSON.stringify([...expandedSpaces]);
+
+                        // Clear
+                        Object.keys(translations).forEach(k => delete translations[k]);
+                        languages.length = 0;
+                        usedPageKeys.clear();
+                        expandedPages.clear();
+                        expandedSpaces.clear();
+                        
+                        saveData();
+                        renderLanguageManager();
+                        renderTable();
+                        closeModal();
+                        
+                        startUndoTimer("All data reset", () => {
+                            // Restore
+                            Object.assign(translations, JSON.parse(backupData));
+                            languages.push(...JSON.parse(backupLangs));
+                            
+                            usedPageKeys.clear();
+                            Object.keys(translations).forEach(k => usedPageKeys.add(k));
+                            
+                            expandedPages.clear();
+                            JSON.parse(backupExpPages).forEach(p => expandedPages.add(p));
+                            
+                            expandedSpaces.clear();
+                            JSON.parse(backupExpSpaces).forEach(s => expandedSpaces.add(s));
+                            
+                            saveData();
+                            renderLanguageManager();
+                            renderTable();
+                        });
+                    };
+                }
+            }, 1000);
+        }
+
+        /* Add/Edit UI Functions */
+
+        // Add Language
+        window.openAddLanguageModal = function() {
+          openModal(`<div>
+            <h3 class='text-lg font-bold text-slate-900 mb-4'>Add Language</h3>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-slate-700 mb-1">Language Code</label>
+              <input id='inpLang' class='w-full border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 p-2.5' placeholder='e.g. en, tr, fr' />
+              <div id="modalError" class="text-red-500 text-sm mt-2 hidden"></div>
+            </div>
+            <div class='flex justify-end gap-3'>
+              <button class='px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg font-medium transition-colors' onclick='renderLanguageManager()'>Cancel</button>
+              <button class='px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium transition-colors shadow-sm' onclick='saveLanguage()'>Add Language</button>
+            </div>
+          </div>`);
+        }
+        window.saveLanguage = function() {
+          const v = document.getElementById("inpLang").value.trim().toLowerCase();
+          try {
+            addLanguage(v);
+            renderLanguageManager();
+            renderTable();
+          } catch (e) {
+            showModalError(e.message);
+          }
+        }
+
+        // Add Page
+        document.getElementById("btnAddPage").onclick = () => {
+          openModal(`<div>
+            <h3 class='text-lg font-bold text-slate-900 mb-4'>Add Page</h3>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-slate-700 mb-1">Page Key</label>
+              <input id='inpPage' class='w-full border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 p-2.5' placeholder='e.g. homePage' />
+              <div id="modalError" class="text-red-500 text-sm mt-2 hidden"></div>
+            </div>
+            <div class='flex justify-end gap-3'>
+              <button class='px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg font-medium transition-colors' onclick='closeModal()'>Cancel</button>
+              <button class='px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium transition-colors shadow-sm' onclick='savePage()'>Create Page</button>
+            </div>
+          </div>`);
+        };
+        window.savePage = function() {
+          const v = document.getElementById("inpPage").value.trim();
+          try {
+            addPage(v);
+            closeModal();
+            renderTable();
+          } catch (e) {
+            showModalError(e.message);
+          }
+        }
+
+        // Rename Page
+        window.openRenamePageModal = function(oldName) {
+          openModal(`<div>
+            <h3 class='text-lg font-bold text-slate-900 mb-4'>Rename Page</h3>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-slate-700 mb-1">Page Key</label>
+              <input id='inpPageRename' class='w-full border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 p-2.5' value="${escapeHtml(oldName)}" />
+              <div id="modalError" class="text-red-500 text-sm mt-2 hidden"></div>
+            </div>
+            <div class='flex justify-end gap-3'>
+              <button class='px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg font-medium transition-colors' onclick='closeModal()'>Cancel</button>
+              <button class='px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium transition-colors shadow-sm' onclick="saveRenamePage('${oldName}')">Save Changes</button>
+            </div>
+          </div>`);
+        }
+        window.saveRenamePage = function(oldName) {
+          const newName = document.getElementById("inpPageRename").value.trim();
+          try {
+              renamePage(oldName, newName);
+              closeModal();
+              renderTable();
+          } catch(e) {
+              showModalError(e.message);
+          }
+        }
+
+        // Helper for Breadcrumbs
+        function renderBreadcrumbs(pageKey, pathArray) {
+            const parts = [pageKey, ...pathArray];
+            return `
+            <div class="flex items-center flex-wrap gap-2 text-sm text-slate-500 mb-4 bg-slate-50 p-2 rounded border border-slate-100">
+                <span class="font-semibold text-slate-700">Location:</span>
+                ${parts.map((p, i) => `
+                    <span class="flex items-center">
+                        ${i > 0 ? '<svg class="w-3 h-3 mx-1 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>' : ''}
+                        <span class="${i === parts.length - 1 ? 'font-bold text-indigo-600' : ''}">${escapeHtml(p)}</span>
+                    </span>
+                `).join('')}
+            </div>`;
+        }
+
+        // Add Space
+        window.openAddSpaceModal = function(pageKey, parentPath) {
+          const breadcrumbs = renderBreadcrumbs(pageKey, parentPath);
+          
+          // Auto-calculate next index if parent is array
+          let defaultKey = "";
+          let isParentArray = false;
+          const container = getSpaceContainer(pageKey, parentPath);
+          
+          if (container && container.isArray) {
+              isParentArray = true;
+              let maxIndex = -1;
+              // Check spaces
+              for (const k in container.spaces) {
+                  const n = parseInt(k);
+                  if (!isNaN(n) && n > maxIndex) maxIndex = n;
+              }
+              // Check translations (though we restricted adding translations, existing ones might exist)
+              for (const k in container.translations) {
+                  const n = parseInt(k);
+                  if (!isNaN(n) && n > maxIndex) maxIndex = n;
+              }
+              // Default Key for display is Order (Index + 1)
+              defaultKey = String(maxIndex + 2);
+          }
+
+          openModal(`<div>
+            <h3 class='text-lg font-bold text-slate-900 mb-2'>${isParentArray ? 'Add Object' : 'Add Space'}</h3>
+            ${breadcrumbs}
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-slate-700 mb-1">${isParentArray ? 'Order' : 'Space Key'} ${defaultKey ? '<span class="text-xs font-normal text-slate-500">(Auto-assigned)</span>' : ''}</label>
+              <input id='inpSpace' class='w-full border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 p-2.5 disabled:bg-gray-100 disabled:text-slate-500' placeholder='${isParentArray ? 'e.g. 1' : 'e.g. heroSection'}' value="${defaultKey}" ${defaultKey ? 'disabled' : ''} />
+              <div id="modalError" class="text-red-500 text-sm mt-2 hidden"></div>
+            </div>
+            <div class="mb-4 flex items-center">
+                <input id="chkIsArray" type="checkbox" class="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500">
+                <label for="chkIsArray" class="ml-2 text-sm font-medium text-slate-700">Is Array? (e.g. for lists)</label>
+            </div>
+            <div class='flex justify-end gap-3'>
+              <button class='px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg font-medium transition-colors' onclick='closeModal()'>Cancel</button>
+              <button class='px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium transition-colors shadow-sm' onclick="saveSpace('${pageKey}', ${JSON.stringify(parentPath).replace(/"/g, '&quot;')})">${isParentArray ? 'Add Object' : 'Add Space'}</button>
+            </div>
+          </div>`);
+        }
+        window.saveSpace = function(pageKey, parentPath) {
+          let v = document.getElementById("inpSpace").value.trim();
+          const isArray = document.getElementById("chkIsArray").checked;
+          
+          // If parent is array, convert Order to Key (Order - 1)
+          const container = getSpaceContainer(pageKey, parentPath);
+          if (container && container.isArray) {
+              const order = parseInt(v);
+              if (!isNaN(order) && order > 0) {
+                  v = String(order - 1);
+              }
+          }
+
+          try {
+            addSpace(pageKey, parentPath, v, isArray);
+            closeModal();
+            renderTable();
+          } catch (e) {
+            showModalError(e.message);
+          }
+        }
+
+        // Change Order (for Array items)
+        window.openChangeOrderModal = function(pageKey, parentPath, oldKey, type) {
+            let currentOrder = parseInt(oldKey) + 1;
+            if (isNaN(currentOrder)) currentOrder = "";
+            
+            openModal(`<div>
+                <h3 class='text-lg font-bold text-slate-900 mb-4'>Change Order</h3>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">New Order Number</label>
+                    <input id='inpNewOrder' type="number" class='w-full border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 p-2.5' value="${currentOrder}" placeholder="Enter new order number" />
+                    <div id="modalError" class="text-red-500 text-sm mt-2 hidden"></div>
+                </div>
+                <div class='flex justify-end gap-3'>
+                    <button class='px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg font-medium transition-colors' onclick='closeModal()'>Cancel</button>
+                    <button class='px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium transition-colors shadow-sm' onclick="saveChangeOrder('${pageKey}', ${JSON.stringify(parentPath).replace(/"/g, '&quot;')}, '${oldKey}', '${type}')">Save</button>
+                </div>
+            </div>`);
+        }
+        
+                window.saveChangeOrder = function(pageKey, parentPath, oldKey, type) {
+            const container = getSpaceContainer(pageKey, parentPath);
+            if (!container) return showModalError("Container not found");
+
+            const collection = type === 'space' ? container.spaces : container.translations;
+            if (!collection) return showModalError("Collection not found");
+
+            const oldIndex = parseInt(oldKey);
+            let newOrder = parseInt(document.getElementById("inpNewOrder").value);
+
+            if (isNaN(newOrder) || newOrder < 1) return showModalError("Invalid order number");
+            
+            // Get all items sorted by numeric key
+            // We filter for numeric keys to be safe, though array containers should only have numeric keys now
+            const items = Object.keys(collection)
+                .filter(k => !isNaN(parseInt(k)))
+                .map(k => ({ key: k, value: collection[k] }))
+                .sort((a, b) => parseInt(a.key) - parseInt(b.key));
+
+            // Validate oldIndex
+            // Find the actual index in the sorted array that corresponds to oldKey
+            const currentItemIndex = items.findIndex(item => item.key === oldKey);
+            if (currentItemIndex === -1) return showModalError("Item not found");
+
+            // Clamp newIndex
+            let newIndex = newOrder - 1;
+            if (newIndex < 0) newIndex = 0;
+            if (newIndex >= items.length) newIndex = items.length - 1;
+
+            if (newIndex === currentItemIndex) {
+                closeModal();
+                return;
+            }
+
+            // Move item
+            const [movedItem] = items.splice(currentItemIndex, 1);
+            items.splice(newIndex, 0, movedItem);
+
+            // Rebuild collection
+            const newCollection = {};
+            items.forEach((item, index) => {
+                newCollection[String(index)] = item.value;
+            });
+
+            // Update container
+            if (type === 'space') {
+                container.spaces = newCollection;
+            } else {
+                container.translations = newCollection;
+            }
+
+            saveData();
+            closeModal();
+            renderTable();
+        }
+
+        function calculateImportDiff(lang, data) {
+            const updates = [];
+            const additions = [];
+
+            function traverse(obj, path) {
+                for (const key in obj) {
+                    if (!isValidKey(key)) continue;
+                    const val = obj[key];
+                    const currentPath = [...path, key];
+                    
+                    if (typeof val === 'string') {
+                        // It's a translation
+                        const container = getSpaceContainer(currentPath[0], currentPath.slice(1, -1));
+                        
+                        // Check if exists
+                        let exists = false;
+                        let oldVal = undefined;
+                        
+                        if (container && container.translations && container.translations[key]) {
+                            exists = true;
+                            oldVal = container.translations[key][lang];
+                        }
+                        
+                        if (exists) {
+                            if (oldVal !== val) {
+                                updates.push({
+                                    path: currentPath.join(" > "),
+                                    key: key,
+                                    oldVal: oldVal || "(empty)",
+                                    newVal: val
+                                });
+                            }
+                        } else {
+                            additions.push({
+                                path: currentPath.join(" > "),
+                                    key: key,
+                                    newVal: val
+                            });
+                        }
+                    } else if (typeof val === 'object' && val !== null) {
+                        // It's a space/page, recurse
+                        traverse(val, currentPath);
+                    }
+                }
+            }
+            
+            // Handle root pages
+            for (const pageKey in data) {
+                traverse({[pageKey]: data[pageKey]}, []);
+            }
+            
+            return { updates, additions };
+        }
+
+        function showImportPreviewModal(diff, lang, data) {
+            const { updates, additions } = diff;
+            
+            let updatesHtml = "";
+            if (updates.length > 0) {
+                updatesHtml = `
+                <div class="mb-6">
+                    <h4 class="font-bold text-amber-600 mb-2 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        Updates (${updates.length})
+                    </h4>
+                    <div class="overflow-x-auto border rounded-lg">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-amber-50 text-amber-900">
+                                <tr>
+                                    <th class="p-2">Path</th>
+                                    <th class="p-2">Old Value</th>
+                                    <th class="p-2">New Value</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                ${updates.map(u => `
+                                    <tr class="bg-white">
+                                        <td class="p-2 text-slate-500 text-xs font-mono">${escapeHtml(u.path)}</td>
+                                        <td class="p-2 text-red-600 bg-red-50/50">${escapeHtml(u.oldVal)}</td>
+                                        <td class="p-2 text-green-600 bg-green-50/50 font-medium">${escapeHtml(u.newVal)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+            }
+
+            let additionsHtml = "";
+            if (additions.length > 0) {
+                additionsHtml = `
+                <div class="mb-6">
+                    <h4 class="font-bold text-emerald-600 mb-2 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                        New Additions (${additions.length})
+                    </h4>
+                    <div class="overflow-x-auto border rounded-lg">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-emerald-50 text-emerald-900">
+                                <tr>
+                                    <th class="p-2">Path</th>
+                                    <th class="p-2">New Value</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                ${additions.map(a => `
+                                    <tr class="bg-white">
+                                        <td class="p-2 text-slate-500 text-xs font-mono">${escapeHtml(a.path)}</td>
+                                        <td class="p-2 text-emerald-600 font-medium">${escapeHtml(a.newVal)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+            }
+
+            openModal(`
+                <div class="max-h-[80vh] flex flex-col">
+                    <h3 class='text-xl font-bold text-slate-900 mb-4'>Import Preview: ${escapeHtml(lang.toUpperCase())}</h3>
+                    <div class="overflow-y-auto flex-1 pr-2">
+                        ${updatesHtml}
+                        ${additionsHtml}
+                        ${updates.length === 0 && additions.length === 0 ? '<p class="text-slate-500 italic">No changes detected.</p>' : ''}
+                    </div>
+                    <div class='flex justify-end gap-3 mt-6 pt-4 border-t'>
+                        <button class='px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg font-medium transition-colors' onclick='closeModal()'>Cancel</button>
+                        <button class='px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium transition-colors shadow-sm' onclick='confirmImport("${escapeHtml(lang)}")'>Confirm Import</button>
+                    </div>
+                </div>
+            `);
+            
+            // Store data temporarily for confirm
+            window._tempImportData = data;
+        }
+        
+        window.confirmImport = function(lang) {
+            if (window._tempImportData) {
+                importTranslations(lang, window._tempImportData);
+                window._tempImportData = null;
+                closeModal();
+                showToast("Import successful!");
+            }
+        }
+
+        // Add Translation
+        window.openAddTranslationModal = function(pageKey, parentPath) {
+          const breadcrumbs = renderBreadcrumbs(pageKey, parentPath);
+          const langInputs = languages.map(l => `
+      <div class="mb-3 border-b border-gray-100 pb-3 last:border-0">
+          <label class="block text-xs font-medium text-slate-500 uppercase mb-1">${escapeHtml(l)}</label>
+          <div id="container_val_${l}">
+            <input id='inp_val_${l}' class='w-full border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 p-2.5 text-sm' placeholder='Translation for ${escapeHtml(l)}' />
+          </div>
+      </div>
+  `).join('');
+
+          openModal(`<div>
+            <h3 class='text-lg font-bold text-slate-900 mb-2'>Add Translation</h3>
+            ${breadcrumbs}
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-slate-700 mb-1">Translation Key</label>
+              <input id='inpTransKey' class='w-full border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 p-2.5' placeholder='e.g. title' />
+            </div>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-slate-700 mb-1">Value Type</label>
+              <select id="sel_global_type" class="w-full border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 p-2.5 text-sm" onchange="toggleGlobalInputType('add')">
+                  <option value="string">String</option>
+                  <option value="number">Number</option>
+                  <option value="boolean">Boolean</option>
+                  <option value="null">Null</option>
+              </select>
+            </div>
+            <div class="max-h-60 overflow-y-auto pr-2 mb-4">
+              ${langInputs}
+            </div>
+            <div id="modalError" class="text-red-500 text-sm mt-2 hidden mb-3"></div>
+            <div class='flex justify-end gap-3'>
+              <button class='px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg font-medium transition-colors' onclick='closeModal()'>Cancel</button>
+              <button class='px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium transition-colors shadow-sm' onclick="saveTrans('${pageKey}', ${JSON.stringify(parentPath).replace(/"/g, '&quot;')})">Add Translation</button>
+            </div>
+          </div>`);
+        }
+
+        window.saveTrans = function(pageKey, parentPath) {
+          const key = document.getElementById("inpTransKey").value.trim();
+          if (!isValidKey(key)) return showModalError("Boşluk olmamalı (Translation key is required)");
+          
+          const type = document.getElementById("sel_global_type").value;
+          const values = {};
+          
+          languages.forEach(l => {
+                let val = null;
+                if (type === 'string') {
+                    val = document.getElementById("inp_val_" + l).value;
+                } else if (type === 'number') {
+                    const raw = document.getElementById("inp_val_" + l).value;
+                    val = raw === '' ? 0 : parseFloat(raw);
+                } else if (type === 'boolean') {
+                    val = document.getElementById("inp_val_" + l).value === 'true';
+                } else if (type === 'null') {
+                    val = null;
+                }
+                values[l] = val;
+            });
+          
+          try {
+            addTranslation(pageKey, parentPath, key, values);
+            closeModal();
+            renderTable();
+          } catch(e) {
+            showModalError(e.message);
+          }
+        }
+
+        window.toggleGlobalInputType = function(prefix) {
+            const type = document.getElementById("sel_global_type").value;
+            
+            languages.forEach(lang => {
+                const container = document.getElementById(`container_val_${lang}`);
+                const inputId = prefix === 'add' ? `inp_val_${lang}` : `inp_edit_val_${lang}`;
+                
+                let html = '';
+                if (type === 'string') {
+                    html = `<input id='${inputId}' class='w-full border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 p-2.5 text-sm' placeholder='Text value' />`;
+                } else if (type === 'number') {
+                    html = `<input type="number" id='${inputId}' class='w-full border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 p-2.5 text-sm' placeholder='0' />`;
+                } else if (type === 'boolean') {
+                    html = `<select id='${inputId}' class='w-full border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 p-2.5 text-sm'>
+                        <option value="true">True</option>
+                        <option value="false">False</option>
+                    </select>`;
+                } else if (type === 'null') {
+                    html = `<input disabled id='${inputId}' class='w-full border-gray-200 rounded-lg bg-gray-100 p-2.5 text-sm text-slate-400 italic' value='null' />`;
+                }
+                container.innerHTML = html;
+            });
+        }
+
+        // Edit Translation (Rename Key + Edit Values)
+        window.openEditTranslationModal = function(pageKey, parentPath, oldKey) {
+          const container = getSpaceContainer(pageKey, parentPath);
+          const currentValues = container ? container.translations[oldKey] : {};
+          
+          // Detect type from first non-undefined value, default to string
+          let initialType = 'string';
+          for (const l of languages) {
+              const v = currentValues[l];
+              if (v !== undefined) {
+                  if (typeof v === 'number') initialType = 'number';
+                  else if (typeof v === 'boolean') initialType = 'boolean';
+                  else if (v === null) initialType = 'null';
+                  break; 
+              }
+          }
+
+          const langInputs = languages.map(l => {
+            const val = currentValues[l];
+            
+            let inputHtml = '';
+            if (initialType === 'string') {
+                inputHtml = `<input id='inp_edit_val_${l}' class='w-full border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 p-2.5 text-sm' value="${escapeHtml(val || '')}" />`;
+            } else if (initialType === 'number') {
+                inputHtml = `<input type="number" id='inp_edit_val_${l}' class='w-full border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 p-2.5 text-sm' value="${val}" />`;
+            } else if (initialType === 'boolean') {
+                inputHtml = `<select id='inp_edit_val_${l}' class='w-full border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 p-2.5 text-sm'>
+                    <option value="true" ${val === true ? 'selected' : ''}>True</option>
+                    <option value="false" ${val === false ? 'selected' : ''}>False</option>
+                </select>`;
+            } else if (initialType === 'null') {
+                inputHtml = `<input disabled id='inp_edit_val_${l}' class='w-full border-gray-200 rounded-lg bg-gray-100 p-2.5 text-sm text-slate-400 italic' value='null' />`;
+            }
+
+            return `
+            <div class="mb-3 border-b border-gray-100 pb-3 last:border-0">
+                <label class="block text-xs font-medium text-slate-500 uppercase mb-1">${escapeHtml(l)}</label>
+                <div id="container_val_${l}">
+                  ${inputHtml}
+                </div>
+            </div>
+        `}).join('');
+
+          openModal(`<div>
+            <h3 class='text-lg font-bold text-slate-900 mb-4'>Edit Translation</h3>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-slate-700 mb-1">Key</label>
+              <div class="flex gap-2">
+                  <input id='inpTransKeyRename' disabled class='w-full border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-100 text-slate-500 p-2.5' value="${escapeHtml(oldKey)}" />
+                  <button class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-slate-600" onclick="toggleKeyEdit()" title="Enable Editing">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                  </button>
+              </div>
+            </div>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-slate-700 mb-1">Value Type</label>
+              <select id="sel_global_type" class="w-full border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 p-2.5 text-sm" onchange="toggleGlobalInputType('edit')">
+                  <option value="string" ${initialType === 'string' ? 'selected' : ''}>String</option>
+                  <option value="number" ${initialType === 'number' ? 'selected' : ''}>Number</option>
+                  <option value="boolean" ${initialType === 'boolean' ? 'selected' : ''}>Boolean</option>
+                  <option value="null" ${initialType === 'null' ? 'selected' : ''}>Null</option>
+              </select>
+            </div>
+            <div class="max-h-60 overflow-y-auto pr-2 mb-4">
+               ${langInputs}
+            </div>
+            <div id="modalError" class="text-red-500 text-sm mt-2 hidden"></div>
+            <div class='flex justify-end gap-3'>
+              <button class='px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg font-medium transition-colors' onclick='closeModal()'>Cancel</button>
+              <button class='px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium transition-colors shadow-sm' onclick="saveEditTranslation('${pageKey}', ${JSON.stringify(parentPath).replace(/"/g, '&quot;')}, '${oldKey}')">Save Changes</button>
+            </div>
+          </div>`);
+        }
+        
+        window.toggleKeyEdit = function() {
+            const inp = document.getElementById("inpTransKeyRename");
+            if (inp.disabled) {
+                inp.disabled = false;
+                inp.classList.remove("bg-gray-100", "text-slate-500");
+                inp.classList.add("bg-white", "text-slate-900");
+                inp.focus();
+            } else {
+                inp.disabled = true;
+                inp.classList.add("bg-gray-100", "text-slate-500");
+                inp.classList.remove("bg-white", "text-slate-900");
+            }
+        }
+        
+        window.saveEditTranslation = function(pageKey, parentPath, oldKey) {
+            const newKey = document.getElementById("inpTransKeyRename").value.trim();
+            if (!isValidKey(newKey)) return showModalError("Boşluk olmamalı");
+            
+            try {
+                // 1. Rename if changed
+                if (newKey !== oldKey) {
+                    renameTranslationKey(pageKey, parentPath, oldKey, newKey);
+                }
+                
+                // 2. Update values
+                const container = getSpaceContainer(pageKey, parentPath);
+                const targetKey = newKey;
+                const type = document.getElementById("sel_global_type").value;
+                
+                languages.forEach(l => {
+            let val = null;
+
+            if (type === 'string') {
+                val = document.getElementById("inp_edit_val_" + l).value;
+            } else if (type === 'number') {
+                const raw = document.getElementById("inp_edit_val_" + l).value;
+                val = raw === '' ? 0 : parseFloat(raw);
+            } else if (type === 'boolean') {
+                val = document.getElementById("inp_edit_val_" + l).value === 'true';
+            } else if (type === 'null') {
+                val = null;
+            }
+
+            if (container.translations[targetKey]) {
+                container.translations[targetKey][l] = val;
+            }
+        });
+
+                closeModal();
+                renderTable();
+            } catch(e) {
+                showModalError(e.message);
+            }
+        }
+
+        /* Import JSON */
+        document.getElementById("btnImport").onclick = () => {
+            openImportModal();
+        };
+
+        window.openImportModal = function() {
+            openModal(`<div>
+                <h3 class='text-lg font-bold text-slate-900 mb-4'>Import JSON</h3>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Target Language Code</label>
+                    <input id='inpImportLang' class='w-full border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 p-2.5 mb-1' placeholder='e.g. en, tr' />
+                    <p class="text-xs text-slate-500">If the language doesn't exist, it will be added.</p>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">JSON Content</label>
+                    <textarea id='txtImportJson' rows="8" class='w-full border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 p-2.5 font-mono text-xs' placeholder='Paste your JSON here...'></textarea>
+                </div>
+                <div id="modalError" class="text-red-500 text-sm mt-2 hidden mb-3"></div>
+                <div class='flex justify-end gap-3'>
+                    <button class='px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg font-medium transition-colors' onclick='closeModal()'>Cancel</button>
+                    <button class='px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium transition-colors shadow-sm' onclick='runImport()'>Import</button>
+                </div>
+            </div>`);
+        }
+
+        window.runImport = function() {
+            const lang = document.getElementById("inpImportLang").value.trim().toLowerCase();
+            const jsonStr = document.getElementById("txtImportJson").value.trim();
+            
+            if (!isValidKey(lang)) return showModalError("Invalid language code");
+            if (!jsonStr) return showModalError("Please paste JSON content");
+
+            try {
+                const data = JSON.parse(jsonStr);
+                
+                // If language doesn't exist, just import (no diff needed)
+                if (!languages.includes(lang)) {
+                     importTranslations(lang, data);
+                     closeModal();
+                     // renderTable() is called inside importTranslations now
+                     showToast("Import successful!");
+                     return;
+                }
+
+                // Calculate Diff
+                const diff = calculateImportDiff(lang, data);
+                
+                if (diff.updates.length === 0 && diff.additions.length === 0) {
+                    showToast("No changes detected.");
+                    return;
+                }
+                
+                showImportPreviewModal(diff, lang, data);
+
+            } catch (e) {
+                showModalError("Import Failed: " + e.message);
+            }
+        }
+
+        function importTranslations(lang, data) {
+            console.log("Importing for lang:", lang, "Data:", data);
+            // 1. Ensure Language Exists
+            // 1. Ensure Language Exists
+            if (!languages.includes(lang)) {
+                addLanguage(lang);
+            }
+
+            // 2. Traverse and Merge
+            for (const pageKey in data) {
+                if (!isValidKey(pageKey)) {
+                    console.warn("Invalid page key:", pageKey);
+                    continue;
+                }
+
+                // Ensure Page Exists
+                if (!translations[pageKey]) {
+                    console.log("Adding new page:", pageKey);
+                    addPage(pageKey);
+                }
+
+                // Recurse
+                mergeRecursive(pageKey, [], data[pageKey], lang);
+            }
+            console.log("Import complete. Translations:", translations);
+            saveData();
+            renderTable();
+        }
+
+        function mergeRecursive(pageKey, path, obj, lang) {
+            const container = getSpaceContainer(pageKey, path);
+            if (!container) return; 
+
+            // Ensure translations object exists (for Pages or Spaces created without it)
+            if (!container.translations) container.translations = {};
+            if (!container.spaces) container.spaces = {};
+
+            // Handle Array Root (if obj itself is array)
+            // But mergeRecursive is called on the *content* of a space/page.
+            // If the content is an array, we iterate its indices.
+            
+            const keys = Object.keys(obj);
+            
+            for (const key of keys) {
+                // For arrays, key is "0", "1", etc.
+                // We don't enforce isValidKey strictly for array indices if we want, but "0" is valid string key.
+                if (!isValidKey(key)) continue; 
+                
+                const val = obj[key];
+
+                if (typeof val === 'string') {
+                    // Case: Translation
+                    if (container.spaces[key]) {
+                        console.warn(`Skipping key '${key}' at path ${path.join('/')}: It is already a Space.`);
+                        continue;
+                    }
+
+                    if (container.translations[key]) {
+                        // Update existing
+                        container.translations[key][lang] = val;
+                    } else {
+                        // Create new
+                        addTranslation(pageKey, path, key, { [lang]: val });
+                    }
+
+                } else if (typeof val === 'object' && val !== null) {
+                    // Case: Space (Object or Array)
+                    if (container.translations[key]) {
+                        console.warn(`Skipping key '${key}' at path ${path.join('/')}: It is already a Translation.`);
+                        continue;
+                    }
+
+                    const isArray = Array.isArray(val);
+
+                    // Ensure Space Exists
+                    if (!container.spaces[key]) {
+                        addSpace(pageKey, path, key, isArray);
+                    } else {
+                        // If exists, update isArray property if needed (though usually it should match)
+                        if (isArray) container.spaces[key].isArray = true;
+                    }
+
+                    // Recurse
+                    mergeRecursive(pageKey, [...path, key], val, lang);
+                }
+            }
+        }
+
+        /* Get JSON */
+        document.getElementById("btnGet").onclick = () => {
+          if (languages.length === 0) return alert("Add a language first");
+          
+          const sel = document.getElementById("selJsonLang");
+          sel.innerHTML = "";
+          languages.forEach(l => {
+              const opt = document.createElement("option");
+              opt.value = l;
+              opt.textContent = l;
+              sel.appendChild(opt);
+          });
+          
+          sel.value = languages[0];
+          updateJsonPreview();
+          
+          document.getElementById("jsonOverlay").classList.remove("hidden");
+          document.getElementById("jsonOverlay").classList.add("flex");
+        };
+        
+        document.getElementById("selJsonLang").onchange = updateJsonPreview;
+        
+        function updateJsonPreview() {
+            const lang = document.getElementById("selJsonLang").value;
+            if(!lang) return;
+            const data = getTranslationsByLang(lang);
+            document.getElementById("jsonCode").textContent = JSON.stringify(data[lang], null, 2);
+        }
+
+        document.getElementById("btnCloseJson").onclick = () => {
+          document.getElementById("jsonOverlay").classList.add("hidden");
+          document.getElementById("jsonOverlay").classList.remove("flex");
+        };
+
+        document.getElementById("btnCopyJson").onclick = () => {
+          const text = document.getElementById("jsonCode").textContent;
+          navigator.clipboard.writeText(text).then(() => showToast("Copied to clipboard")).catch(() => showToast("Failed to copy", 'error'));
+        };
+
+        document.getElementById("btnDownloadJson").onclick = () => {
+          const text = document.getElementById("jsonCode").textContent;
+          const blob = new Blob([text], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "translations.json";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        };
+
+        /* Init */
+        loadData();
+        renderTable();
+      });
+    </script>
+  </body>
+</html>
