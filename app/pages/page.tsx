@@ -5,6 +5,7 @@ import { getPages, deletePage } from '@/lib/pages'
 import { Page } from '@/types/pageBuilder'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import LastActivityBadge from '@/components/LastActivityBadge'
 
 export default function PagesList() {
   const [pages, setPages] = useState<Page[]>([])
@@ -123,6 +124,13 @@ export default function PagesList() {
                         <span>• Updated {new Date(page.updatedAt).toLocaleDateString()}</span>
                       )}
                     </div>
+                    {page.id && (
+                      <LastActivityBadge
+                        entityType="page"
+                        entityId={page.id}
+                        compact
+                      />
+                    )}
                   </div>
 
                   <div className="flex gap-2">

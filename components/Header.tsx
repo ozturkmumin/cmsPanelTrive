@@ -98,6 +98,13 @@ export default function Header({
         >
           <span>Page Builder</span>
         </a>
+        <a
+          href="/activity"
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-slate-700 hover:bg-gray-50 font-medium rounded-lg transition-colors shadow-sm"
+          title="Activity Log"
+        >
+          📋 Activity
+        </a>
         {user && (
           <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-200">
             <span className="text-sm text-slate-600">{user.email}</span>

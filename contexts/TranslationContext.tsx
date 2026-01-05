@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { saveTranslations, saveLanguages, subscribeToData, getTranslations, getLanguages } from '@/lib/firestore'
+import { logActivity } from '@/lib/activityLog'
+import { getCurrentUser } from '@/lib/auth'
 
 interface TranslationValue {
   [lang: string]: string | number | boolean | null
@@ -348,7 +350,7 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
     })
   }, [getSpaceContainer, isValidKey])
 
-  const addTranslation = useCallback((pageKey: string, parentPath: string[], key: string, values?: { [lang: string]: any }) => {
+  const addTranslation = useCallback(async (pageKey: string, parentPath: string[], key: string, values?: { [lang: string]: any }) => {
     const container = getSpaceContainer(pageKey, parentPath)
     if (!container) throw new Error("Space not found")
     if (!isValidKey(key)) throw new Error("Invalid key")
@@ -379,9 +381,19 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
       }
       return newSet
     })
+
+    // Log activity
+    const user = getCurrentUser()
+    await logActivity(user, 'create', 'translation', {
+      entityId: `${pageKey}/${parentPath.join('/')}/${key}`,
+      entityName: key,
+      details: `Created new translation key: ${key}`,
+    })
   }, [getSpaceContainer, isValidKey, languages])
 
-  const deleteTranslation = useCallback((pageKey: string, parentPath: string[], key: string) => {
+  const deleteTranslation = useCallback(async (pageKey: string, parentPath: string[], key: string) => {
+    const user = getCurrentUser()
+    
     setTranslations(prev => {
       const newTranslations = { ...prev }
       let current: Space = newTranslations[pageKey]
@@ -392,6 +404,13 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
         delete current.translations[key]
       }
       return newTranslations
+    })
+
+    // Log activity
+    await logActivity(user, 'delete', 'translation', {
+      entityId: `${pageKey}/${parentPath.join('/')}/${key}`,
+      entityName: key,
+      details: `Deleted translation key: ${key}`,
     })
   }, [])
 
@@ -417,6 +436,9 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
   }, [getSpaceContainer, isValidKey])
 
   const updateTranslationValue = useCallback((pageKey: string, parentPath: string[], key: string, lang: string, value: any) => {
+    const user = getCurrentUser()
+    const oldValue = translations[pageKey]?.spaces?.[parentPath[0]]?.translations?.[key]?.[lang]
+    
     setTranslations(prev => {
       const newTranslations = { ...prev }
       let current: Space = newTranslations[pageKey]
@@ -428,7 +450,21 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
       }
       return newTranslations
     })
-  }, [])
+
+    // Log activity (fire and forget)
+    if (oldValue !== value) {
+      logActivity(user, 'update', 'translation', {
+        entityId: `${pageKey}/${parentPath.join('/')}/${key}`,
+        entityName: `${key} (${lang})`,
+        details: `Updated translation value for ${lang}`,
+        changes: [{
+          field: lang,
+          oldValue: oldValue,
+          newValue: value,
+        }],
+      }).catch(err => console.error('Failed to log activity:', err))
+    }
+  }, [translations])
 
   const togglePage = useCallback((pageKey: string) => {
     setExpandedPages(prev => {

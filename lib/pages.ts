@@ -11,6 +11,8 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { Page } from '@/types/pageBuilder'
+import { logActivity } from './activityLog'
+import { getCurrentUser } from './auth'
 
 const COLLECTION_NAME = 'pages'
 
@@ -111,17 +113,35 @@ export async function savePage(page: Page): Promise<string> {
       blocksCount: blocks.length,
     })
     
+    const user = getCurrentUser()
+    
     if (page.id && page.id !== 'new-page') {
       // Update existing page - use setDoc with merge: false to replace entire document
       const docRef = doc(db, COLLECTION_NAME, page.id)
       await setDoc(docRef, pageData)
       console.log('Page updated:', page.id, 'Blocks:', blocks.length)
+      
+      // Log activity
+      await logActivity(user, 'update', 'page', {
+        entityId: page.id,
+        entityName: pageData.name,
+        details: `Updated page with ${blocks.length} blocks`,
+      })
+      
       return page.id
     } else {
       // Create new page
       const docRef = doc(collection(db, COLLECTION_NAME))
       await setDoc(docRef, pageData)
       console.log('Page created:', docRef.id, 'Blocks:', blocks.length)
+      
+      // Log activity
+      await logActivity(user, 'create', 'page', {
+        entityId: docRef.id,
+        entityName: pageData.name,
+        details: `Created new page with ${blocks.length} blocks`,
+      })
+      
       return docRef.id
     }
   } catch (error) {
@@ -133,8 +153,20 @@ export async function savePage(page: Page): Promise<string> {
 // Delete a page
 export async function deletePage(pageId: string): Promise<void> {
   try {
+    // Get page data before deleting for logging
+    const pageDoc = await getDoc(doc(db, COLLECTION_NAME, pageId))
+    const pageData = pageDoc.data()
+    
     const docRef = doc(db, COLLECTION_NAME, pageId)
     await deleteDoc(docRef)
+    
+    // Log activity
+    const user = getCurrentUser()
+    await logActivity(user, 'delete', 'page', {
+      entityId: pageId,
+      entityName: pageData?.name || 'Unknown',
+      details: 'Deleted page',
+    })
   } catch (error) {
     console.error('Error deleting page:', error)
     throw error

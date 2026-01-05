@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react'
 import { useTranslation } from '@/contexts/TranslationContext'
+import LastActivityBadge from './LastActivityBadge'
 
 interface TranslationsTableProps {
   pageKey: string
@@ -110,23 +111,30 @@ export default function TranslationsTable({
                   </td>
                 )}
                 <td className="p-2 font-medium text-slate-700 align-top">
-                  <div className="flex items-center">
-                    {tkey}
-                    {type === 'number' && (
-                      <span className="ml-2 text-[9px] uppercase font-bold text-green-600 bg-green-100 px-1 rounded">NUM</span>
-                    )}
-                    {type === 'boolean' && (
-                      <span className="ml-2 text-[9px] uppercase font-bold text-blue-600 bg-blue-100 px-1 rounded">BOOL</span>
-                    )}
-                    {type === 'null' && (
-                      <span className="ml-2 text-[9px] uppercase font-bold text-gray-600 bg-gray-100 px-1 rounded">NULL</span>
-                    )}
-                    {type === 'string' && (
-                      <span className="ml-2 text-[9px] uppercase font-bold text-slate-400 bg-slate-100 px-1 rounded">STR</span>
-                    )}
-                    {keyMatch && (
-                      <span className="ml-2 text-[10px] bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded-full">Match</span>
-                    )}
+                  <div>
+                    <div className="flex items-center">
+                      {tkey}
+                      {type === 'number' && (
+                        <span className="ml-2 text-[9px] uppercase font-bold text-green-600 bg-green-100 px-1 rounded">NUM</span>
+                      )}
+                      {type === 'boolean' && (
+                        <span className="ml-2 text-[9px] uppercase font-bold text-blue-600 bg-blue-100 px-1 rounded">BOOL</span>
+                      )}
+                      {type === 'null' && (
+                        <span className="ml-2 text-[9px] uppercase font-bold text-gray-600 bg-gray-100 px-1 rounded">NULL</span>
+                      )}
+                      {type === 'string' && (
+                        <span className="ml-2 text-[9px] uppercase font-bold text-slate-400 bg-slate-100 px-1 rounded">STR</span>
+                      )}
+                      {keyMatch && (
+                        <span className="ml-2 text-[10px] bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded-full">Match</span>
+                      )}
+                    </div>
+                    <LastActivityBadge
+                      entityType="translation"
+                      entityId={`${pageKey}/${path.join('/')}/${tkey}`}
+                      compact
+                    />
                   </div>
                 </td>
                 {languages.map(lang => {
