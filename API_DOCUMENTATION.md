@@ -4,13 +4,14 @@ Bu dokümantasyon, Translation Manager API endpoint'lerini açıklar. Tüm endpo
 
 ## Base URL
 
+**Production:**
 ```
-http://localhost:3000/api/translations
+https://cms-panel-trive.vercel.app/api/translations
 ```
 
-Production için:
+**Development (Local):**
 ```
-https://your-domain.com/api/translations
+http://localhost:3000/api/translations
 ```
 
 ## Endpoints
@@ -30,6 +31,12 @@ Tüm mevcut dilleri listeler.
 
 **Örnek Kullanım:**
 ```javascript
+// Production
+fetch('https://cms-panel-trive.vercel.app/api/translations')
+  .then(res => res.json())
+  .then(data => console.log(data.languages))
+
+// Development
 fetch('http://localhost:3000/api/translations')
   .then(res => res.json())
   .then(data => console.log(data.languages))
@@ -61,13 +68,18 @@ Belirtilen dil için tüm sayfaların çevirilerini döndürür.
 
 **Örnek Kullanım:**
 ```javascript
-// Türkçe çevirileri getir
-fetch('http://localhost:3000/api/translations/tr')
+// Production - Türkçe çevirileri getir
+fetch('https://cms-panel-trive.vercel.app/api/translations/tr')
   .then(res => res.json())
   .then(data => console.log(data))
 
-// İngilizce çevirileri getir
-fetch('http://localhost:3000/api/translations/en')
+// Production - İngilizce çevirileri getir
+fetch('https://cms-panel-trive.vercel.app/api/translations/en')
+  .then(res => res.json())
+  .then(data => console.log(data))
+
+// Development
+fetch('http://localhost:3000/api/translations/tr')
   .then(res => res.json())
   .then(data => console.log(data))
 ```
@@ -104,6 +116,15 @@ Tüm diller için tüm çevirileri tek seferde getirir.
 
 **Örnek Kullanım:**
 ```javascript
+// Production
+fetch('https://cms-panel-trive.vercel.app/api/translations/all')
+  .then(res => res.json())
+  .then(data => {
+    console.log(data.en) // İngilizce çeviriler
+    console.log(data.tr) // Türkçe çeviriler
+  })
+
+// Development
 fetch('http://localhost:3000/api/translations/all')
   .then(res => res.json())
   .then(data => {
@@ -158,13 +179,18 @@ GET /api/translations/page/home
 
 **Örnek Kullanım:**
 ```javascript
-// Sadece Türkçe
-fetch('http://localhost:3000/api/translations/page/home?lang=tr')
+// Production - Sadece Türkçe
+fetch('https://cms-panel-trive.vercel.app/api/translations/page/home?lang=tr')
   .then(res => res.json())
   .then(data => console.log(data))
 
-// Tüm diller
-fetch('http://localhost:3000/api/translations/page/home')
+// Production - Tüm diller
+fetch('https://cms-panel-trive.vercel.app/api/translations/page/home')
+  .then(res => res.json())
+  .then(data => console.log(data))
+
+// Development
+fetch('http://localhost:3000/api/translations/page/home?lang=tr')
   .then(res => res.json())
   .then(data => console.log(data))
 ```
@@ -185,12 +211,16 @@ Tüm endpoint'ler CORS (Cross-Origin Resource Sharing) desteği ile çalışır.
 
 ```typescript
 // Hook olarak kullanım
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://cms-panel-trive.vercel.app/api/translations'
+  : '/api/translations'
+
 function useTranslations(lang: string) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   
   useEffect(() => {
-    fetch(`/api/translations/${lang}`)
+    fetch(`${API_BASE_URL}/${lang}`)
       .then(res => res.json())
       .then(data => {
         setData(data)
@@ -205,9 +235,11 @@ function useTranslations(lang: string) {
 ### Vanilla JavaScript ile Kullanım
 
 ```javascript
+const API_BASE_URL = 'https://cms-panel-trive.vercel.app/api/translations'
+
 async function getTranslations(lang) {
   try {
-    const response = await fetch(`http://localhost:3000/api/translations/${lang}`)
+    const response = await fetch(`${API_BASE_URL}/${lang}`)
     const data = await response.json()
     return data
   } catch (error) {
@@ -227,7 +259,7 @@ console.log(trTranslations)
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'http://localhost:3000/api/translations'
+  baseURL: 'https://cms-panel-trive.vercel.app/api/translations'
 })
 
 // Türkçe çevirileri getir
@@ -242,16 +274,22 @@ console.log(languages.data.languages)
 ### cURL ile Test
 
 ```bash
-# Tüm dilleri listele
+# Production - Tüm dilleri listele
+curl https://cms-panel-trive.vercel.app/api/translations
+
+# Production - Türkçe çevirileri getir
+curl https://cms-panel-trive.vercel.app/api/translations/tr
+
+# Production - Tüm çevirileri getir
+curl https://cms-panel-trive.vercel.app/api/translations/all
+
+# Production - Belirli sayfa için çeviriler
+curl https://cms-panel-trive.vercel.app/api/translations/page/home?lang=tr
+
+# Development
 curl http://localhost:3000/api/translations
-
-# Türkçe çevirileri getir
 curl http://localhost:3000/api/translations/tr
-
-# Tüm çevirileri getir
 curl http://localhost:3000/api/translations/all
-
-# Belirli sayfa için çeviriler
 curl http://localhost:3000/api/translations/page/home?lang=tr
 ```
 
@@ -277,4 +315,35 @@ Hata durumlarında response formatı:
 - Array'ler ve nested objeler desteklenir
 - Tüm endpoint'ler GET metodunu kullanır
 - CORS headers otomatik olarak eklenir
+- Production URL: `https://cms-panel-trive.vercel.app`
+- Tüm endpoint'ler herhangi bir domain'den erişilebilir (CORS: `*`)
+
+## Hızlı Başlangıç
+
+Production API'yi kullanmak için:
+
+```javascript
+const API_URL = 'https://cms-panel-trive.vercel.app/api/translations'
+
+// Tüm dilleri listele
+const languages = await fetch(`${API_URL}`).then(r => r.json())
+
+// Türkçe çevirileri getir
+const trTranslations = await fetch(`${API_URL}/tr`).then(r => r.json())
+
+// Tüm çevirileri getir
+const allTranslations = await fetch(`${API_URL}/all`).then(r => r.json())
+
+// Belirli sayfa için çeviriler
+const homePage = await fetch(`${API_URL}/page/home?lang=tr`).then(r => r.json())
+```
+
+## Canlı Test
+
+Aşağıdaki linklerle API'yi doğrudan test edebilirsiniz:
+
+- [Tüm Diller](https://cms-panel-trive.vercel.app/api/translations)
+- [Türkçe Çeviriler](https://cms-panel-trive.vercel.app/api/translations/tr)
+- [Tüm Çeviriler](https://cms-panel-trive.vercel.app/api/translations/all)
+- [Home Sayfası - Türkçe](https://cms-panel-trive.vercel.app/api/translations/page/home?lang=tr)
 

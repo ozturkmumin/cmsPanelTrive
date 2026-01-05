@@ -41,7 +41,7 @@ export async function logActivity(
     details?: string
     changes?: ActivityLog['changes']
   } = {}
-): Promise<void> {
+): Promise<string | void> {
   let userInfo
   try {
     userInfo = getUserInfo(user)
