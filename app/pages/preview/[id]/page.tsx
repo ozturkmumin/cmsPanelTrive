@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { getPage, Page } from '@/lib/pages'
+import { getPage } from '@/lib/pages'
+import { Page } from '@/types/pageBuilder'
 import { useParams } from 'next/navigation'
 import BlockRenderer from '@/components/pageBuilder/BlockRenderer'
 

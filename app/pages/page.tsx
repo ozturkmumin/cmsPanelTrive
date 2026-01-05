@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { getPages, deletePage, Page } from '@/lib/pages'
+import { getPages, deletePage } from '@/lib/pages'
+import { Page } from '@/types/pageBuilder'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
