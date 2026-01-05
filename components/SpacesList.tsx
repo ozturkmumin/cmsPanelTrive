@@ -203,7 +203,7 @@ export default function SpacesList({
                   pageKey={pageKey}
                   path={currentPath}
                   translations={space.translations}
-                  isParentArray={isArray}
+                  isParentArray={isArray || false}
                   onRename={onRenameTranslation}
                   onDelete={onDeleteTranslation}
                   onEdit={onEditTranslation}
