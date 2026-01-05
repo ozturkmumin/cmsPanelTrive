@@ -237,7 +237,7 @@ export default function PageBuilder() {
             <div className="w-80 bg-white border-l border-gray-200 overflow-y-auto">
               <BlockProperties
                 block={selectedBlock}
-                onUpdate={(updates) => updateBlock(selectedBlock.id, updates)}
+                onUpdate={(updates: Partial<Block>) => updateBlock(selectedBlock.id, updates)}
                 onClose={() => setSelectedBlock(null)}
               />
             </div>
