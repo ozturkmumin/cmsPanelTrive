@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useCallback } from 'react'
 import { useDrag, useDrop } from 'react-dnd'
 import { Block } from '@/types/pageBuilder'
 import BlockRenderer from './BlockRenderer'
@@ -43,9 +43,13 @@ export default function BlockEditor({
     },
   })
 
+  const dragDropRef = useCallback((node: HTMLDivElement | null) => {
+    drag(drop(node))
+  }, [drag, drop])
+
   return (
     <div
-      ref={(node) => drag(drop(node))}
+      ref={dragDropRef}
       className={`relative group border-2 rounded-lg transition-all ${
         isSelected
           ? 'border-indigo-500 shadow-lg'
