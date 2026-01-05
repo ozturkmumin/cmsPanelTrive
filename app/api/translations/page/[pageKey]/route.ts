@@ -38,7 +38,6 @@ export async function GET(
     
     // If lang is specified, return only that language
     if (lang) {
-<<<<<<< HEAD
       // Check if language exists in translations even if not in languages list
       const hasLanguageInData = (container: any): boolean => {
         if (container.translations) {
@@ -71,20 +70,6 @@ export async function GET(
               'Access-Control-Allow-Origin': '*',
               'Access-Control-Allow-Methods': 'GET, OPTIONS',
               'Access-Control-Allow-Headers': 'Content-Type',
-=======
-      if (!languages.includes(lang)) {
-        console.log('⚠️ Language not found:', lang, 'Available:', languages)
-        return NextResponse.json(
-          { 
-            error: `Language '${lang}' not found. Available languages: ${languages.join(', ') || 'none'}`,
-            availableLanguages: languages
-          },
-          { 
-            status: 404,
-            headers: {
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': '*',
->>>>>>> 9da4a1ce1672bba23fcd791e258baf3d00b25bb6
             },
           }
         )

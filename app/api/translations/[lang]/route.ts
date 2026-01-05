@@ -12,31 +12,10 @@ export async function GET(
     // Get all languages to verify the requested language exists
     const languages = await getLanguages()
     console.log('✅ Languages fetched:', languages)
-<<<<<<< HEAD
-=======
-    
-    if (!languages.includes(lang)) {
-      console.log('⚠️ Language not found:', lang, 'Available:', languages)
-      return NextResponse.json(
-        { 
-          error: `Language '${lang}' not found. Available languages: ${languages.join(', ') || 'none'}`,
-          availableLanguages: languages 
-        },
-        { 
-          status: 404,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          },
-        }
-      )
-    }
->>>>>>> 9da4a1ce1672bba23fcd791e258baf3d00b25bb6
     
     // Get translations for the requested language
     const allTranslations = await getTranslations()
     console.log('✅ Translations fetched, pages:', Object.keys(allTranslations).length)
-<<<<<<< HEAD
     
     // Check if language exists in translations even if not in languages list
     const hasLanguageInData = (container: any): boolean => {
@@ -83,8 +62,6 @@ export async function GET(
         }
       )
     }
-=======
->>>>>>> 9da4a1ce1672bba23fcd791e258baf3d00b25bb6
     
     // Transform to the export format (same as getTranslationsByLang)
     const result: any = { [lang]: {} }
