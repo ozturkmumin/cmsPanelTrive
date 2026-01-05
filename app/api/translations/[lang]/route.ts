@@ -7,19 +7,32 @@ export async function GET(
 ) {
   try {
     const lang = params.lang.toLowerCase()
+    console.log('📥 API Request: GET /api/translations/[lang]', { lang })
     
     // Get all languages to verify the requested language exists
     const languages = await getLanguages()
+    console.log('✅ Languages fetched:', languages)
     
     if (!languages.includes(lang)) {
+      console.log('⚠️ Language not found:', lang, 'Available:', languages)
       return NextResponse.json(
-        { error: `Language '${lang}' not found. Available languages: ${languages.join(', ')}` },
-        { status: 404 }
+        { 
+          error: `Language '${lang}' not found. Available languages: ${languages.join(', ') || 'none'}`,
+          availableLanguages: languages 
+        },
+        { 
+          status: 404,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          },
+        }
       )
     }
     
     // Get translations for the requested language
     const allTranslations = await getTranslations()
+    console.log('✅ Translations fetched, pages:', Object.keys(allTranslations).length)
     
     // Transform to the export format (same as getTranslationsByLang)
     const result: any = { [lang]: {} }
@@ -66,8 +79,11 @@ export async function GET(
       result[lang][pageKey] = recurse(allTranslations[pageKey])
     }
     
+    const responseData = result[lang]
+    console.log('📤 Response data keys:', Object.keys(responseData))
+    
     // Set CORS headers to allow cross-origin requests
-    return NextResponse.json(result[lang], {
+    return NextResponse.json(responseData, {
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
@@ -76,10 +92,19 @@ export async function GET(
       },
     })
   } catch (error: any) {
-    console.error('Error fetching translations:', error)
+    console.error('❌ Error fetching translations:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch translations', message: error.message },
-      { status: 500 }
+      { 
+        error: 'Failed to fetch translations', 
+        message: error.message 
+      },
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      }
     )
   }
 }

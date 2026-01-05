@@ -4,10 +4,12 @@ import { getLanguages, getTranslations } from '@/lib/firestore'
 // Get all available languages
 export async function GET() {
   try {
+    console.log('📥 API Request: GET /api/translations')
     const languages = await getLanguages()
+    console.log('✅ Languages fetched:', languages)
     
-    return NextResponse.json(
-      { languages },
+    const response = NextResponse.json(
+      { languages: languages || [] },
       {
         headers: {
           'Content-Type': 'application/json',
@@ -17,11 +19,24 @@ export async function GET() {
         },
       }
     )
+    
+    console.log('📤 Response sent:', { languages: languages || [] })
+    return response
   } catch (error: any) {
-    console.error('Error fetching languages:', error)
+    console.error('❌ Error fetching languages:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch languages', message: error.message },
-      { status: 500 }
+      { 
+        error: 'Failed to fetch languages', 
+        message: error.message,
+        languages: [] 
+      },
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      }
     )
   }
 }

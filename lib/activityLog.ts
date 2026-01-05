@@ -130,10 +130,13 @@ export async function getRecentActivities(
     }
 
     const querySnapshot = await getDocs(q)
-    const activities = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as ActivityLog[]
+    const activities = querySnapshot.docs.map(doc => {
+      const data = doc.data()
+      return {
+        id: doc.id,
+        ...(data || {}),
+      } as ActivityLog
+    })
     
     console.log(`Found ${activities.length} activities from Firestore`)
     return activities
@@ -148,10 +151,13 @@ export async function getRecentActivities(
           limit(limitCount)
         )
         const querySnapshot = await getDocs(simpleQuery)
-        let results = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as ActivityLog[]
+        let results = querySnapshot.docs.map(doc => {
+          const data = doc.data()
+          return {
+            id: doc.id,
+            ...(data || {}),
+          } as ActivityLog
+        })
         
         // Filter in memory if needed
         if (entityType) {
@@ -193,10 +199,13 @@ export async function getUserActivities(
     )
 
     const querySnapshot = await getDocs(q)
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as ActivityLog[]
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data()
+      return {
+        id: doc.id,
+        ...(data || {}),
+      } as ActivityLog
+    })
   } catch (error) {
     console.error('Error getting user activities:', error)
     return []

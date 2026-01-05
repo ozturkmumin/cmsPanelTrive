@@ -4,8 +4,10 @@ import { getTranslations, getLanguages } from '@/lib/firestore'
 // Get all translations for all languages
 export async function GET() {
   try {
+    console.log('📥 API Request: GET /api/translations/all')
     const languages = await getLanguages()
     const allTranslations = await getTranslations()
+    console.log('✅ Languages:', languages, 'Pages:', Object.keys(allTranslations).length)
     
     const result: any = {}
     
@@ -56,6 +58,7 @@ export async function GET() {
       }
     })
     
+    console.log('📤 Response sent with', Object.keys(result).length, 'languages')
     return NextResponse.json(result, {
       headers: {
         'Content-Type': 'application/json',
@@ -65,10 +68,19 @@ export async function GET() {
       },
     })
   } catch (error: any) {
-    console.error('Error fetching all translations:', error)
+    console.error('❌ Error fetching all translations:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch translations', message: error.message },
-      { status: 500 }
+      { 
+        error: 'Failed to fetch translations', 
+        message: error.message 
+      },
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      }
     )
   }
 }
