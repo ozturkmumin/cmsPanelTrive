@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { getEntityActivities, ActivityLog } from '@/lib/activityLog'
+import { getEntityActivities } from '@/lib/activityLog'
+import { ActivityLog } from '@/types/activity'
 
 interface LastActivityBadgeProps {
   entityType: ActivityLog['entityType']

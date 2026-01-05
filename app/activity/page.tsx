@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { getRecentActivities, ActivityLog } from '@/lib/activityLog'
+import { getRecentActivities } from '@/lib/activityLog'
+import { ActivityLog } from '@/types/activity'
 import { getCurrentUser } from '@/lib/auth'
 import Link from 'next/link'
 
