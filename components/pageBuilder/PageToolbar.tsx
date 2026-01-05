@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Page } from '@/types/pageBuilder'
 import { useRouter } from 'next/navigation'
 import { savePage } from '@/lib/pages'
