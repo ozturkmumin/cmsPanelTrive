@@ -9,26 +9,69 @@ export async function GET(
   try {
     const { searchParams } = new URL(request.url)
     const lang = searchParams.get('lang')?.toLowerCase()
+    const pageKey = params.pageKey
+    
+    console.log('📥 API Request: GET /api/translations/page/[pageKey]', { pageKey, lang })
     
     const languages = await getLanguages()
     const allTranslations = await getTranslations()
+    console.log('✅ Languages:', languages, 'Pages:', Object.keys(allTranslations).length)
     
-    const pageKey = params.pageKey
     const pageData = allTranslations[pageKey]
     
     if (!pageData) {
+      console.log('⚠️ Page not found:', pageKey)
       return NextResponse.json(
-        { error: `Page '${pageKey}' not found` },
-        { status: 404 }
+        { 
+          error: `Page '${pageKey}' not found`,
+          availablePages: Object.keys(allTranslations)
+        },
+        { 
+          status: 404,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          },
+        }
       )
     }
     
     // If lang is specified, return only that language
     if (lang) {
-      if (!languages.includes(lang)) {
+      // Check if language exists in translations even if not in languages list
+      const hasLanguageInData = (container: any): boolean => {
+        if (container.translations) {
+          for (const key in container.translations) {
+            if (container.translations[key] && container.translations[key][lang] !== undefined) {
+              return true
+            }
+          }
+        }
+        if (container.spaces) {
+          for (const key in container.spaces) {
+            if (hasLanguageInData(container.spaces[key])) {
+              return true
+            }
+          }
+        }
+        return false
+      }
+
+      const languageExists = languages.includes(lang) || hasLanguageInData(pageData)
+      
+      if (!languageExists) {
+        console.log('⚠️ Language not found:', lang, 'Available:', languages)
+        // Return empty object instead of error, so API still works
         return NextResponse.json(
-          { error: `Language '${lang}' not found. Available languages: ${languages.join(', ')}` },
-          { status: 404 }
+          {},
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'GET, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type',
+            },
+          }
         )
       }
       
@@ -70,7 +113,9 @@ export async function GET(
         return res
       }
       
-      return NextResponse.json(recurse(pageData), {
+      const result = recurse(pageData)
+      console.log('📤 Response sent for page:', pageKey, 'lang:', lang)
+      return NextResponse.json(result, {
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
@@ -126,6 +171,7 @@ export async function GET(
       result[l] = recurse(pageData)
     })
     
+    console.log('📤 Response sent for page:', pageKey, 'all languages')
     return NextResponse.json(result, {
       headers: {
         'Content-Type': 'application/json',
@@ -135,10 +181,19 @@ export async function GET(
       },
     })
   } catch (error: any) {
-    console.error('Error fetching page translations:', error)
+    console.error('❌ Error fetching page translations:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch translations', message: error.message },
-      { status: 500 }
+      { 
+        error: 'Failed to fetch translations', 
+        message: error.message 
+      },
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      }
     )
   }
 }

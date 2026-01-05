@@ -7,19 +7,61 @@ export async function GET(
 ) {
   try {
     const lang = params.lang.toLowerCase()
+    console.log('📥 API Request: GET /api/translations/[lang]', { lang })
     
     // Get all languages to verify the requested language exists
     const languages = await getLanguages()
-    
-    if (!languages.includes(lang)) {
-      return NextResponse.json(
-        { error: `Language '${lang}' not found. Available languages: ${languages.join(', ')}` },
-        { status: 404 }
-      )
-    }
+    console.log('✅ Languages fetched:', languages)
     
     // Get translations for the requested language
     const allTranslations = await getTranslations()
+    console.log('✅ Translations fetched, pages:', Object.keys(allTranslations).length)
+    
+    // Check if language exists in translations even if not in languages list
+    const hasLanguageInData = (container: any): boolean => {
+      if (container.translations) {
+        for (const key in container.translations) {
+          if (container.translations[key] && container.translations[key][lang] !== undefined) {
+            return true
+          }
+        }
+      }
+      if (container.spaces) {
+        for (const key in container.spaces) {
+          if (hasLanguageInData(container.spaces[key])) {
+            return true
+          }
+        }
+      }
+      return false
+    }
+
+    let languageExists = languages.includes(lang)
+    if (!languageExists) {
+      // Check if language exists in any translation data
+      for (const pageKey in allTranslations) {
+        if (hasLanguageInData(allTranslations[pageKey])) {
+          languageExists = true
+          break
+        }
+      }
+    }
+    
+    if (!languageExists) {
+      console.log('⚠️ Language not found:', lang, 'Available:', languages)
+      // Return empty object instead of error
+      return NextResponse.json(
+        {},
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          },
+        }
+      )
+    }
     
     // Transform to the export format (same as getTranslationsByLang)
     const result: any = { [lang]: {} }
@@ -66,8 +108,11 @@ export async function GET(
       result[lang][pageKey] = recurse(allTranslations[pageKey])
     }
     
+    const responseData = result[lang]
+    console.log('📤 Response data keys:', Object.keys(responseData))
+    
     // Set CORS headers to allow cross-origin requests
-    return NextResponse.json(result[lang], {
+    return NextResponse.json(responseData, {
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
@@ -76,10 +121,19 @@ export async function GET(
       },
     })
   } catch (error: any) {
-    console.error('Error fetching translations:', error)
+    console.error('❌ Error fetching translations:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch translations', message: error.message },
-      { status: 500 }
+      { 
+        error: 'Failed to fetch translations', 
+        message: error.message 
+      },
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      }
     )
   }
 }
