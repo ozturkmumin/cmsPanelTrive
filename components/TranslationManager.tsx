@@ -4,6 +4,7 @@ import React, { useState, useCallback, useMemo } from 'react'
 import { useTranslation } from '@/contexts/TranslationContext'
 import Header from './Header'
 import TranslationTable from './TranslationTable'
+import Dashboard from './Dashboard'
 import Modal from './Modal'
 import Toast from './Toast'
 import UndoToast from './UndoToast'
@@ -80,6 +81,8 @@ export default function TranslationManager() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
       />
+
+      <Dashboard />
 
       <TranslationTable 
         pages={pages}

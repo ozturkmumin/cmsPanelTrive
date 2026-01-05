@@ -42,8 +42,9 @@ export async function logActivity(
     changes?: ActivityLog['changes']
   } = {}
 ): Promise<void> {
+  let userInfo
   try {
-    const userInfo = getUserInfo(user)
+    userInfo = getUserInfo(user)
     
     const activity: Omit<ActivityLog, 'id'> = {
       ...userInfo,
@@ -56,9 +57,33 @@ export async function logActivity(
       timestamp: new Date().toISOString(),
     }
 
-    await addDoc(collection(db, COLLECTION_NAME), activity)
-  } catch (error) {
-    console.error('Error logging activity:', error)
+    console.log('Logging activity:', activity)
+    
+    // Check if db is initialized
+    if (!db) {
+      console.error('Firestore db is not initialized')
+      return
+    }
+    
+    const docRef = await addDoc(collection(db, COLLECTION_NAME), activity)
+    console.log('✅ Activity logged successfully with ID:', docRef.id)
+    return docRef.id
+  } catch (error: any) {
+    console.error('❌ Error logging activity:', error)
+    console.error('Error details:', {
+      collection: COLLECTION_NAME,
+      user: userInfo || { userId: 'unknown', userEmail: 'unknown' },
+      action,
+      entityType,
+      errorMessage: error?.message,
+      errorCode: error?.code,
+    })
+    
+    // Show alert for permission errors
+    if (error?.code === 'permission-denied') {
+      console.error('⚠️ Permission denied! Check Firestore rules.')
+    }
+    
     // Don't throw - activity logging shouldn't break the app
   }
 }
@@ -70,27 +95,77 @@ export async function getRecentActivities(
   entityId?: string
 ): Promise<ActivityLog[]> {
   try {
-    let q = query(
+    let q: any = query(
       collection(db, COLLECTION_NAME),
       orderBy('timestamp', 'desc'),
       limit(limitCount)
     )
 
     if (entityType) {
-      q = query(q, where('entityType', '==', entityType))
+      q = query(
+        collection(db, COLLECTION_NAME),
+        where('entityType', '==', entityType),
+        orderBy('timestamp', 'desc'),
+        limit(limitCount)
+      )
     }
 
     if (entityId) {
-      q = query(q, where('entityId', '==', entityId))
+      if (entityType) {
+        q = query(
+          collection(db, COLLECTION_NAME),
+          where('entityType', '==', entityType),
+          where('entityId', '==', entityId),
+          orderBy('timestamp', 'desc'),
+          limit(limitCount)
+        )
+      } else {
+        q = query(
+          collection(db, COLLECTION_NAME),
+          where('entityId', '==', entityId),
+          orderBy('timestamp', 'desc'),
+          limit(limitCount)
+        )
+      }
     }
 
     const querySnapshot = await getDocs(q)
-    return querySnapshot.docs.map(doc => ({
+    const activities = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
     })) as ActivityLog[]
+    
+    console.log(`Found ${activities.length} activities from Firestore`)
+    return activities
   } catch (error) {
     console.error('Error getting activities:', error)
+    // If there's an index error, try without filters
+    if (error instanceof Error && (error.message.includes('index') || error.message.includes('requires an index'))) {
+      try {
+        const simpleQuery = query(
+          collection(db, COLLECTION_NAME),
+          orderBy('timestamp', 'desc'),
+          limit(limitCount)
+        )
+        const querySnapshot = await getDocs(simpleQuery)
+        let results = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as ActivityLog[]
+        
+        // Filter in memory if needed
+        if (entityType) {
+          results = results.filter(a => a.entityType === entityType)
+        }
+        if (entityId) {
+          results = results.filter(a => a.entityId === entityId)
+        }
+        
+        return results
+      } catch (fallbackError) {
+        console.error('Fallback query also failed:', fallbackError)
+      }
+    }
     return []
   }
 }

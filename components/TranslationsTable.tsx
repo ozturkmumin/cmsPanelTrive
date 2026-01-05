@@ -56,7 +56,13 @@ export default function TranslationsTable({
 
   if (keys.length === 0) {
     if (searchQuery) return null
-    return <div className="text-xs text-slate-400 italic py-2">No translations</div>
+    return (
+      <div className="text-center py-12 bg-gradient-to-br from-gray-50 to-white rounded-lg border-2 border-dashed border-gray-200 animate-fade-in">
+        <div className="text-4xl mb-3">📝</div>
+        <p className="text-sm text-slate-500 font-medium">No translations yet</p>
+        <p className="text-xs text-slate-400 mt-1">Add your first translation key</p>
+      </div>
+    )
   }
 
   const getType = (key: string): string => {
@@ -74,10 +80,10 @@ export default function TranslationsTable({
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto animate-fade-in">
       <table className="w-full text-left text-sm">
         <thead>
-          <tr className="border-b border-gray-100 text-slate-400 uppercase text-xs tracking-wider">
+          <tr className="border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white text-slate-400 uppercase text-xs tracking-wider">
             {isParentArray && <th className="p-2 font-medium w-16">Order</th>}
             <th className="p-2 font-medium w-1/4">Key</th>
             {languages.map(l => (
@@ -94,7 +100,7 @@ export default function TranslationsTable({
             const keyMatch = searchQuery ? tkey.toLowerCase().includes(searchQuery.toLowerCase()) : false
 
             return (
-              <tr key={tkey} className="hover:bg-slate-50/50 transition-colors group/row">
+              <tr key={tkey} className="hover:bg-indigo-50/30 transition-all duration-200 group/row animate-slide-up">
                 {isParentArray && (
                   <td className="p-2 font-medium text-slate-500 align-top">
                     <div className="flex items-center gap-1">

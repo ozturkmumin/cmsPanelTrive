@@ -5,6 +5,7 @@ import { Page } from '@/types/pageBuilder'
 import { useRouter } from 'next/navigation'
 import { savePage } from '@/lib/pages'
 import { downloadPageAsZip } from '@/lib/downloadPage'
+import { downloadPageAsHtml } from '@/lib/downloadHtml'
 
 interface PageToolbarProps {
   page: Page
@@ -87,7 +88,20 @@ export default function PageToolbar({ page, onPageUpdate, onPreview }: PageToolb
           className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
           title="Download as Next.js project"
         >
-          📥 Download
+          📦 Download ZIP
+        </button>
+        <button
+          onClick={() => {
+            try {
+              downloadPageAsHtml(page)
+            } catch (error: any) {
+              alert('Download failed: ' + error.message)
+            }
+          }}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          title="Download as HTML file"
+        >
+          🌐 Download HTML
         </button>
       </div>
 

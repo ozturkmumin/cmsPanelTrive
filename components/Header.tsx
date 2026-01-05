@@ -34,7 +34,7 @@ export default function Header({
   }
 
   return (
-    <header className="flex items-center justify-between mb-8 bg-white p-6 rounded-xl shadow-sm border border-gray-100 sticky top-4 z-30">
+    <header className="flex items-center justify-between mb-8 bg-white/80 backdrop-blur-md p-6 rounded-xl shadow-lg border border-gray-200/50 sticky top-4 z-30 animate-slide-up">
       <div>
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Translation Manager</h1>
         <p className="text-slate-500 text-sm mt-1">Manage your localization keys efficiently</p>
@@ -62,49 +62,49 @@ export default function Header({
             />
           </svg>
         </div>
-        <button
-          onClick={onImportClick}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-slate-700 hover:bg-gray-50 font-medium rounded-lg transition-colors shadow-sm"
-        >
-          <span>Import JSON</span>
-        </button>
-        <button
-          onClick={onGetJsonClick}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-slate-700 hover:bg-gray-50 font-medium rounded-lg transition-colors shadow-sm"
-        >
-          <span>Get JSON</span>
-        </button>
-        <button
-          onClick={onLanguagesClick}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-slate-700 hover:bg-gray-50 font-medium rounded-lg transition-colors shadow-sm"
-        >
-          <span>Languages</span>
-        </button>
-        <button
-          onClick={onAddPageClick}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white hover:bg-slate-800 font-medium rounded-lg transition-colors shadow-md hover:shadow-lg"
-        >
-          <span>+ Add Page</span>
-        </button>
-        <a
-          href="/pages"
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-slate-700 hover:bg-gray-50 font-medium rounded-lg transition-colors shadow-sm"
-        >
-          <span>My Pages</span>
-        </a>
-        <a
-          href="/page-builder"
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 font-medium rounded-lg transition-colors shadow-md hover:shadow-lg"
-        >
-          <span>Page Builder</span>
-        </a>
-        <a
-          href="/activity"
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-slate-700 hover:bg-gray-50 font-medium rounded-lg transition-colors shadow-sm"
-          title="Activity Log"
-        >
-          📋 Activity
-        </a>
+         <button
+           onClick={onImportClick}
+           className="flex items-center justify-center gap-2 px-5 py-2.5 h-11 min-w-[120px] bg-white border border-gray-200 text-slate-700 hover:bg-gray-50 font-medium rounded-lg transition-colors shadow-sm"
+         >
+           <span>Import JSON</span>
+         </button>
+         <button
+           onClick={onGetJsonClick}
+           className="flex items-center justify-center gap-2 px-5 py-2.5 h-11 min-w-[120px] bg-white border border-gray-200 text-slate-700 hover:bg-gray-50 font-medium rounded-lg transition-colors shadow-sm"
+         >
+           <span>Get JSON</span>
+         </button>
+         <button
+           onClick={onLanguagesClick}
+           className="flex items-center justify-center gap-2 px-5 py-2.5 h-11 min-w-[120px] bg-white border border-gray-200 text-slate-700 hover:bg-gray-50 font-medium rounded-lg transition-colors shadow-sm"
+         >
+           <span>Languages</span>
+         </button>
+         <button
+           onClick={onAddPageClick}
+           className="flex items-center justify-center gap-2 px-5 py-2.5 h-11 min-w-[120px] bg-slate-900 text-white hover:bg-slate-800 font-medium rounded-lg transition-colors shadow-md hover:shadow-lg"
+         >
+           <span>+ Add Page</span>
+         </button>
+         <a
+           href="/pages"
+           className="flex items-center justify-center gap-2 px-5 py-2.5 h-11 min-w-[120px] bg-white border border-gray-200 text-slate-700 hover:bg-gray-50 font-medium rounded-lg transition-colors shadow-sm"
+         >
+           <span>My Pages</span>
+         </a>
+         <a
+           href="/page-builder"
+           className="flex items-center justify-center gap-2 px-5 py-2.5 h-11 min-w-[120px] bg-indigo-600 text-white hover:bg-indigo-700 font-medium rounded-lg transition-colors shadow-md hover:shadow-lg"
+         >
+           <span>Page Builder</span>
+         </a>
+         <a
+           href="/activity"
+           className="flex items-center justify-center gap-2 px-5 py-2.5 h-11 min-w-[120px] bg-white border border-gray-200 text-slate-700 hover:bg-gray-50 font-medium rounded-lg transition-colors shadow-sm"
+           title="Activity Log"
+         >
+           📋 Activity
+         </a>
         {user && (
           <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-200">
             <span className="text-sm text-slate-600">{user.email}</span>

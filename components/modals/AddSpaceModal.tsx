@@ -18,14 +18,14 @@ export default function AddSpaceModal({ isOpen, onClose, pageKey, path, onSucces
   const [isArray, setIsArray] = useState(false)
   const [error, setError] = useState('')
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError('')
     if (!isValidKey(spaceKey)) {
       setError('Invalid space key (no spaces allowed)')
       return
     }
     try {
-      addSpace(pageKey, path, spaceKey, isArray)
+      await addSpace(pageKey, path, spaceKey, isArray)
       onSuccess('Space added successfully!')
       setSpaceKey('')
       setIsArray(false)

@@ -8,7 +8,7 @@ export default function Home() {
   return (
     <AuthGuard>
       <TranslationProvider>
-        <div className="max-w-7xl mx-auto pb-20">
+        <div className="max-w-8xl mx-auto pb-20">
           <TranslationManager />
         </div>
       </TranslationProvider>

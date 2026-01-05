@@ -15,14 +15,14 @@ export default function AddPageModal({ isOpen, onClose, onSuccess }: AddPageModa
   const [pageKey, setPageKey] = useState('')
   const [error, setError] = useState('')
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError('')
     if (!isValidKey(pageKey)) {
       setError('Invalid page key (no spaces allowed)')
       return
     }
     try {
-      addPage(pageKey)
+      await addPage(pageKey)
       onSuccess('Page added successfully!')
       setPageKey('')
       onClose()

@@ -47,10 +47,24 @@ export async function getTranslations(): Promise<Translations> {
 // Save translations to Firestore
 export async function saveTranslations(translations: Translations): Promise<void> {
   try {
+    if (!db) {
+      throw new Error('Firestore db is not initialized')
+    }
     const docRef = doc(db, COLLECTIONS.SETTINGS, 'data');
+    console.log('📝 Writing translations to Firestore:', {
+      collection: COLLECTIONS.SETTINGS,
+      docId: 'data',
+      pagesCount: Object.keys(translations).length
+    })
     await setDoc(docRef, { translations }, { merge: true });
-  } catch (error) {
-    console.error('Error saving translations:', error);
+    console.log('✅ Translations saved successfully')
+  } catch (error: any) {
+    console.error('❌ Error saving translations:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    })
     throw error;
   }
 }

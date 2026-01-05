@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo } from 'react'
+import React, { useMemo, useEffect } from 'react'
 import { useTranslation } from '@/contexts/TranslationContext'
 import PageSection from './PageSection'
 
@@ -31,7 +31,30 @@ export default function TranslationTable({
   onEditTranslation,
   onChangeOrder,
 }: TranslationTableProps) {
-  const { translations, searchQuery, expandedPages, setSearchQuery } = useTranslation()
+  const { translations, searchQuery, expandedPages, setSearchQuery, togglePage } = useTranslation()
+
+  const checkDeepMatch = useMemo(() => {
+    const checkDeepMatchFn = (container: any, query: string): boolean => {
+      if (container.translations) {
+        for (const key in container.translations) {
+          if (key.toLowerCase().includes(query)) return true
+          const values = container.translations[key]
+          for (const lang in values) {
+            const val = String(values[lang] || '')
+            if (val.toLowerCase().includes(query)) return true
+          }
+        }
+      }
+      if (container.spaces) {
+        for (const key in container.spaces) {
+          if (key.toLowerCase().includes(query)) return true
+          if (checkDeepMatchFn(container.spaces[key], query)) return true
+        }
+      }
+      return false
+    }
+    return checkDeepMatchFn
+  }, [])
 
   const visiblePages = useMemo(() => {
     if (!searchQuery) return pages
@@ -44,49 +67,62 @@ export default function TranslationTable({
       if (!page) return false
       return checkDeepMatch(page, query)
     })
-  }, [pages, searchQuery, translations])
+  }, [pages, searchQuery, translations, checkDeepMatch])
 
-  const checkDeepMatch = (container: any, query: string): boolean => {
-    if (container.translations) {
-      for (const key in container.translations) {
-        if (key.toLowerCase().includes(query)) return true
-        const values = container.translations[key]
-        for (const lang in values) {
-          const val = String(values[lang] || '')
-          if (val.toLowerCase().includes(query)) return true
+  // Auto-expand pages that match search
+  useEffect(() => {
+    if (searchQuery && visiblePages.length > 0) {
+      visiblePages.forEach(pageKey => {
+        if (!expandedPages.has(pageKey)) {
+          togglePage(pageKey)
         }
-      }
+      })
     }
-    if (container.spaces) {
-      for (const key in container.spaces) {
-        if (key.toLowerCase().includes(query)) return true
-        if (checkDeepMatch(container.spaces[key], query)) return true
-      }
-    }
-    return false
-  }
+  }, [searchQuery, visiblePages, expandedPages, togglePage])
 
   if (pages.length === 0) {
     return (
-      <div className="text-center py-16 bg-white rounded-xl border border-dashed border-gray-300">
-        <p className="text-slate-500 mb-4">No content yet.</p>
-        <p className="text-sm text-slate-400">Start by adding a language, then create your first page.</p>
+      <div className="text-center py-20 bg-white rounded-xl border-2 border-dashed border-gray-300 animate-fade-in">
+        <div className="max-w-md mx-auto">
+          <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center">
+            <span className="text-5xl">📄</span>
+          </div>
+          <h3 className="text-xl font-bold text-slate-900 mb-2">No pages yet</h3>
+          <p className="text-slate-500 mb-6">Start by adding a language, then create your first page.</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => {
+                const event = new Event('click')
+                document.querySelector('[data-add-language]')?.dispatchEvent(event)
+              }}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+            >
+              Add Language
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
 
   if (visiblePages.length === 0 && searchQuery) {
     return (
-      <div className="text-center py-16 bg-white rounded-xl border border-dashed border-gray-300">
-        <p className="text-slate-500 mb-4">
-          No matches found for &quot;<b>{searchQuery}</b>&quot;
-        </p>
-        <button
-          onClick={() => setSearchQuery('')}
-          className="text-indigo-600 hover:text-indigo-700 font-medium"
-        >
-          Clear Search
-        </button>
+      <div className="text-center py-20 bg-white rounded-xl border-2 border-dashed border-gray-300 animate-fade-in">
+        <div className="max-w-md mx-auto">
+          <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-yellow-100 to-orange-100 rounded-full flex items-center justify-center">
+            <span className="text-4xl">🔍</span>
+          </div>
+          <h3 className="text-xl font-bold text-slate-900 mb-2">No matches found</h3>
+          <p className="text-slate-500 mb-2">
+            No results for &quot;<span className="font-semibold text-indigo-600">{searchQuery}</span>&quot;
+          </p>
+          <button
+            onClick={() => setSearchQuery('')}
+            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+          >
+            Clear Search
+          </button>
+        </div>
       </div>
     )
   }

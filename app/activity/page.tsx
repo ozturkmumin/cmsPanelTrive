@@ -18,10 +18,28 @@ export default function ActivityLogPage() {
     loadActivities()
   }, [filter])
 
+  // Debug: Check if we can access Firestore
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const { db } = await import('@/lib/firebase')
+        const { collection, getDocs } = await import('firebase/firestore')
+        const snapshot = await getDocs(collection(db, 'activityLogs'))
+        console.log('Activity logs count:', snapshot.size)
+        console.log('Sample activity:', snapshot.docs[0]?.data())
+      } catch (error) {
+        console.error('Firestore connection error:', error)
+      }
+    }
+    checkConnection()
+  }, [])
+
   const loadActivities = async () => {
     setLoading(true)
     try {
       const allActivities = await getRecentActivities(100)
+      console.log('Loaded activities:', allActivities.length)
+      
       let filtered = allActivities
 
       if (filter.entityType) {
@@ -34,6 +52,7 @@ export default function ActivityLogPage() {
       setActivities(filtered)
     } catch (error) {
       console.error('Error loading activities:', error)
+      alert('Failed to load activities. Please check console for details.')
     } finally {
       setLoading(false)
     }
@@ -82,8 +101,14 @@ export default function ActivityLogPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-          <p className="mt-4 text-slate-600">Loading activity log...</p>
+          <div className="relative">
+            <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-indigo-200 border-t-indigo-600"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-8 h-8 bg-indigo-600 rounded-full animate-pulse"></div>
+            </div>
+          </div>
+          <p className="mt-6 text-slate-600 font-medium">Loading activity log...</p>
+          <p className="mt-2 text-sm text-slate-400">Fetching your activity history</p>
         </div>
       </div>
     )
@@ -155,13 +180,43 @@ export default function ActivityLogPage() {
         {/* Activities List */}
         {activities.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-xl border border-dashed border-gray-300">
-            <p className="text-slate-500">No activities found</p>
+            <p className="text-slate-500 mb-4">No activities found</p>
+            <p className="text-xs text-slate-400 mb-6">
+              Activities will appear here when you make changes to translations or pages.
+            </p>
+            <button
+              onClick={async () => {
+                try {
+                  const { logActivity } = await import('@/lib/activityLog')
+                  const user = getCurrentUser()
+                  await logActivity(user, 'create', 'translation', {
+                    entityName: 'Test Activity',
+                    details: 'This is a test activity to verify logging works',
+                  })
+                  alert('Test activity logged! Refreshing...')
+                  await loadActivities()
+                } catch (error: any) {
+                  alert('Error: ' + error.message)
+                  console.error('Test activity error:', error)
+                }
+              }}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm"
+            >
+              Test Activity Log
+            </button>
+            <p className="text-xs text-slate-400 mt-4">
+              Check browser console for debug information
+            </p>
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <div className="divide-y divide-gray-200">
-              {activities.map((activity) => (
-                <div key={activity.id} className="p-4 hover:bg-gray-50 transition-colors">
+              {activities.map((activity, idx) => (
+                <div 
+                  key={activity.id} 
+                  className="p-4 hover:bg-indigo-50/30 transition-all duration-200 animate-slide-up"
+                  style={{ animationDelay: `${idx * 30}ms` }}
+                >
                   <div className="flex items-start gap-4">
                     <div className="text-2xl">
                       {getActionIcon(activity.action)} {getEntityIcon(activity.entityType)}

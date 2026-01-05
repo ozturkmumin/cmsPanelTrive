@@ -55,6 +55,8 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
   const [expandedPages, setExpandedPages] = useState<Set<string>>(new Set())
   const [expandedSpaces, setExpandedSpaces] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
 
   const isValidKey = useCallback((k: string) => {
     return typeof k === "string" && k.trim() !== "" && !/\s/.test(k)
@@ -71,22 +73,41 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
   }, [translations])
 
   const saveData = useCallback(async () => {
+    if (isSaving) {
+      console.log('⏳ Already saving, skipping...')
+      return
+    }
+    
+    setIsSaving(true)
     try {
+      console.log('💾 Saving translations to Firestore...', { 
+        pages: Object.keys(translations).length,
+        languages: languages.length 
+      })
       await Promise.all([
         saveTranslations(translations),
         saveLanguages(languages)
       ])
-    } catch (e) {
-      console.error("Failed to save:", e)
+      console.log('✅ Successfully saved translations to Firestore')
+    } catch (e: any) {
+      console.error("❌ Failed to save to Firestore:", e)
+      console.error("Error details:", {
+        message: e.message,
+        code: e.code,
+        stack: e.stack
+      })
       // Fallback to localStorage if Firestore fails
       try {
         localStorage.setItem("tm_data", JSON.stringify(translations))
         localStorage.setItem("tm_langs", JSON.stringify(languages))
+        console.log('✅ Saved to localStorage as fallback')
       } catch (localError) {
-        console.error("Failed to save to localStorage:", localError)
+        console.error("❌ Failed to save to localStorage:", localError)
       }
+    } finally {
+      setIsSaving(false)
     }
-  }, [translations, languages])
+  }, [translations, languages, isSaving])
 
   const loadData = useCallback(async () => {
     try {
@@ -128,7 +149,9 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
       
       // Then subscribe to real-time updates
       unsubscribe = subscribeToData((data) => {
-        if (isMounted) {
+        if (isMounted && !isSaving) {
+          // Only update if we're not currently saving (to prevent circular updates)
+          console.log('📥 Received real-time update from Firestore')
           setTranslations(data.translations)
           setLanguages(data.languages)
         }
@@ -141,21 +164,27 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
         unsubscribe()
       }
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isSaving]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-save to Firestore when data changes (debounced)
   useEffect(() => {
-    // Don't save on initial mount
+    // Skip save on initial mount or if data is empty
+    if (isInitialLoad) {
+      setIsInitialLoad(false)
+      return
+    }
+
     if (translations && Object.keys(translations).length === 0 && languages.length === 0) {
       return
     }
 
+    console.log('🔄 Translation data changed, scheduling save...')
     const timer = setTimeout(() => {
       saveData()
     }, 1000) // Debounce: save 1 second after last change
 
     return () => clearTimeout(timer)
-  }, [translations, languages, saveData])
+  }, [translations, languages, saveData, isInitialLoad])
 
   const addLanguage = useCallback((code: string) => {
     if (!isValidKey(code)) throw new Error("Invalid language code")
@@ -238,6 +267,16 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
       [pageKey]: { translations: {}, spaces: {} }
     }))
     setExpandedPages(prev => new Set(prev).add(pageKey))
+
+    // Log activity
+    const user = getCurrentUser()
+    logActivity(user, 'create', 'page', {
+      entityId: pageKey,
+      entityName: pageKey,
+      details: `Created new translation page: ${pageKey}`,
+    }).catch(err => {
+      console.error('❌ Failed to log page create activity:', err)
+    })
   }, [translations, isValidKey])
 
   const deletePage = useCallback((pageKey: string) => {
@@ -250,6 +289,16 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
       const newSet = new Set(prev)
       newSet.delete(pageKey)
       return newSet
+    })
+
+    // Log activity
+    const user = getCurrentUser()
+    logActivity(user, 'delete', 'page', {
+      entityId: pageKey,
+      entityName: pageKey,
+      details: `Deleted translation page: ${pageKey}`,
+    }).catch(err => {
+      console.error('❌ Failed to log page delete activity:', err)
     })
   }, [])
 
@@ -273,6 +322,21 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
         newSet.add(newKey)
       }
       return newSet
+    })
+
+    // Log activity
+    const user = getCurrentUser()
+    logActivity(user, 'update', 'page', {
+      entityId: oldKey,
+      entityName: `${oldKey} → ${newKey}`,
+      details: `Renamed page from ${oldKey} to ${newKey}`,
+      changes: [{
+        field: 'pageKey',
+        oldValue: oldKey,
+        newValue: newKey,
+      }],
+    }).catch(err => {
+      console.error('❌ Failed to log page rename activity:', err)
     })
   }, [translations, isValidKey])
 
@@ -384,10 +448,12 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
 
     // Log activity
     const user = getCurrentUser()
-    await logActivity(user, 'create', 'translation', {
+    logActivity(user, 'create', 'translation', {
       entityId: `${pageKey}/${parentPath.join('/')}/${key}`,
       entityName: key,
       details: `Created new translation key: ${key}`,
+    }).catch(err => {
+      console.error('❌ Failed to log translation create activity:', err)
     })
   }, [getSpaceContainer, isValidKey, languages])
 
@@ -407,10 +473,12 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
     })
 
     // Log activity
-    await logActivity(user, 'delete', 'translation', {
+    logActivity(user, 'delete', 'translation', {
       entityId: `${pageKey}/${parentPath.join('/')}/${key}`,
       entityName: key,
       details: `Deleted translation key: ${key}`,
+    }).catch(err => {
+      console.error('❌ Failed to log translation delete activity:', err)
     })
   }, [])
 
@@ -462,7 +530,17 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
           oldValue: oldValue,
           newValue: value,
         }],
-      }).catch(err => console.error('Failed to log activity:', err))
+      }).catch(err => {
+        console.error('❌ Failed to log translation update activity:', err)
+        console.error('Activity details:', {
+          pageKey,
+          path: parentPath,
+          key,
+          lang,
+          oldValue,
+          newValue: value,
+        })
+      })
     }
   }, [translations])
 

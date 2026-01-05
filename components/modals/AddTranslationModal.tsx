@@ -17,14 +17,14 @@ export default function AddTranslationModal({ isOpen, onClose, pageKey, path, on
   const [key, setKey] = useState('')
   const [error, setError] = useState('')
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError('')
     if (!isValidKey(key)) {
       setError('Invalid key (no spaces allowed)')
       return
     }
     try {
-      addTranslation(pageKey, path, key)
+      await addTranslation(pageKey, path, key)
       onSuccess('Translation added successfully!')
       setKey('')
       onClose()

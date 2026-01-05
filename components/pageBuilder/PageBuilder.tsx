@@ -154,8 +154,14 @@ export default function PageBuilder() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-          <p className="mt-4 text-slate-600">Loading page...</p>
+          <div className="relative">
+            <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-indigo-200 border-t-indigo-600"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-8 h-8 bg-indigo-600 rounded-full animate-pulse"></div>
+            </div>
+          </div>
+          <p className="mt-6 text-slate-600 font-medium">Loading page...</p>
+          <p className="mt-2 text-sm text-slate-400">Preparing your page builder</p>
         </div>
       </div>
     )
@@ -189,23 +195,22 @@ export default function PageBuilder() {
           <div className="flex-1 overflow-y-auto bg-gray-100 p-8">
             <div className="max-w-4xl mx-auto bg-white min-h-full shadow-lg">
               {!currentPage.blocks || currentPage.blocks.length === 0 ? (
-                <div className="flex items-center justify-center h-96 text-gray-400">
-                  <div className="text-center">
-                    <p className="text-xl mb-2">No blocks yet</p>
-                    <p className="text-sm">Add blocks from the left sidebar</p>
+                <div className="flex items-center justify-center h-96 animate-fade-in">
+                  <div className="text-center max-w-md">
+                    <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center">
+                      <span className="text-4xl">🎨</span>
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-900 mb-2">Start Building</h3>
+                    <p className="text-slate-500 mb-6">Drag blocks from the left sidebar to start creating your page</p>
+                    <div className="flex gap-2 justify-center">
+                      <div className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-medium">
+                        ← Drag & Drop
+                      </div>
+                    </div>
                     {pageId && (
-                      <div className="mt-4 text-xs text-gray-400 space-y-1">
+                      <div className="mt-6 pt-6 border-t border-gray-200 text-xs text-gray-400 space-y-1">
                         <p>Page ID: {pageId}</p>
                         <p>Blocks: {currentPage.blocks?.length || 0}</p>
-                        <button
-                          onClick={() => {
-                            console.log('Current page state:', JSON.stringify(currentPage, null, 2))
-                            alert('Check console for page data')
-                          }}
-                          className="mt-2 px-3 py-1 bg-gray-200 rounded text-xs hover:bg-gray-300"
-                        >
-                          Debug Info
-                        </button>
                       </div>
                     )}
                   </div>

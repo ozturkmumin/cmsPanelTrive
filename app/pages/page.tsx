@@ -52,7 +52,7 @@ export default function PagesList() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-8">
+      <div className="max-w-8xl mx-auto p-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -77,21 +77,28 @@ export default function PagesList() {
 
         {/* Pages Grid */}
         {pages.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-xl border border-dashed border-gray-300">
-            <p className="text-slate-500 mb-4">No pages created yet.</p>
-            <Link
-              href="/page-builder"
-              className="inline-block px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-            >
-              Create Your First Page
-            </Link>
+          <div className="text-center py-20 bg-white rounded-xl border-2 border-dashed border-gray-300 animate-fade-in">
+            <div className="max-w-md mx-auto">
+              <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center">
+                <span className="text-5xl">🚀</span>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">No pages created yet</h3>
+              <p className="text-slate-500 mb-6">Create your first landing page with our powerful page builder</p>
+              <Link
+                href="/page-builder"
+                className="inline-block px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl font-medium"
+              >
+                Create Your First Page
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {pages.map(page => (
+            {pages.map((page, idx) => (
               <div
                 key={page.id}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:border-indigo-200 transition-all duration-300 hover:-translate-y-1 animate-fade-in"
+                style={{ animationDelay: `${idx * 50}ms` }}
               >
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
@@ -117,19 +124,33 @@ export default function PagesList() {
                     </div>
                   </div>
 
-                  <div className="mb-4">
-                    <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
-                      <span>📦 {page.blocks?.length || 0} blocks</span>
+                  <div className="mb-4 space-y-2">
+                    <div className="flex items-center gap-3 text-xs">
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg font-medium">
+                        <span>📦</span>
+                        <span>{page.blocks?.length || 0} blocks</span>
+                      </div>
                       {page.updatedAt && (
-                        <span>• Updated {new Date(page.updatedAt).toLocaleDateString()}</span>
+                        <div className="flex items-center gap-1.5 text-slate-500">
+                          <span>🕒</span>
+                          <span>{new Date(page.updatedAt).toLocaleDateString('tr-TR', { 
+                            day: 'numeric', 
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}</span>
+                        </div>
                       )}
                     </div>
                     {page.id && (
-                      <LastActivityBadge
-                        entityType="page"
-                        entityId={page.id}
-                        compact
-                      />
+                      <div className="flex items-center gap-2 text-xs">
+                        <LastActivityBadge
+                          entityType="page"
+                          entityId={page.id}
+                          compact={false}
+                        />
+                      </div>
                     )}
                   </div>
 
@@ -245,7 +266,16 @@ function PagePreviewContent({ page }: { page: Page }) {
           }}
           className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
         >
-          Download as ZIP
+          📦 Download ZIP
+        </button>
+        <button
+          onClick={async () => {
+            const { downloadPageAsHtml } = await import('@/lib/downloadHtml')
+            downloadPageAsHtml(page)
+          }}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          🌐 Download HTML
         </button>
       </div>
     </div>

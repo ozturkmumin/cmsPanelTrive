@@ -122,10 +122,12 @@ export async function savePage(page: Page): Promise<string> {
       console.log('Page updated:', page.id, 'Blocks:', blocks.length)
       
       // Log activity
-      await logActivity(user, 'update', 'page', {
+      logActivity(user, 'update', 'page', {
         entityId: page.id,
         entityName: pageData.name,
         details: `Updated page with ${blocks.length} blocks`,
+      }).catch(err => {
+        console.error('❌ Failed to log page update activity:', err)
       })
       
       return page.id
@@ -136,10 +138,12 @@ export async function savePage(page: Page): Promise<string> {
       console.log('Page created:', docRef.id, 'Blocks:', blocks.length)
       
       // Log activity
-      await logActivity(user, 'create', 'page', {
+      logActivity(user, 'create', 'page', {
         entityId: docRef.id,
         entityName: pageData.name,
         details: `Created new page with ${blocks.length} blocks`,
+      }).catch(err => {
+        console.error('❌ Failed to log page create activity:', err)
       })
       
       return docRef.id
@@ -162,10 +166,12 @@ export async function deletePage(pageId: string): Promise<void> {
     
     // Log activity
     const user = getCurrentUser()
-    await logActivity(user, 'delete', 'page', {
+    logActivity(user, 'delete', 'page', {
       entityId: pageId,
       entityName: pageData?.name || 'Unknown',
       details: 'Deleted page',
+    }).catch(err => {
+      console.error('❌ Failed to log page delete activity:', err)
     })
   } catch (error) {
     console.error('Error deleting page:', error)

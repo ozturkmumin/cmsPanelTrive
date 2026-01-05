@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo } from 'react'
+import React, { useMemo, useEffect } from 'react'
 import { useTranslation } from '@/contexts/TranslationContext'
 import TranslationsTable from './TranslationsTable'
 
@@ -81,6 +81,18 @@ export default function SpacesList({
     }
     return false
   }
+
+  // Auto-expand spaces that match search
+  useEffect(() => {
+    if (searchQuery && spaces.length > 0) {
+      spaces.forEach(spaceKey => {
+        const spacePath = pageKey + (path.length ? "::" + path.join("::") : "") + "::" + spaceKey
+        if (!expandedSpaces.has(spacePath)) {
+          toggleSpace(pageKey, [...path, spaceKey])
+        }
+      })
+    }
+  }, [searchQuery, spaces, pageKey, path, expandedSpaces, toggleSpace])
 
   if (spaces.length === 0 && path.length === 0) {
     if (searchQuery) return null
